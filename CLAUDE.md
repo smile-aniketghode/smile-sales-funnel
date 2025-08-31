@@ -9,9 +9,9 @@ This is an AI-powered sales funnel system that processes Gmail emails to automat
 ## Architecture
 
 The system uses a monorepo structure with these main components:
-- `infra/` - Infrastructure as code (DynamoDB, SQS, CloudFormation/Terraform)
+- `infra/` - Infrastructure as code (DynamoDB, CloudFormation/Terraform)
 - `worker/` - Background processing service with LangGraph orchestration
-- `api/` - REST API (FastAPI/Express) serving the UI
+- `api/` - NestJS REST API serving the UI
 - `ui/` - React+Vite frontend with AI Inbox interface
 - `prompts/` - LLM prompts and templates
 
@@ -57,9 +57,9 @@ Use conventional commits: `type(scope): message`
 
 ### Infrastructure
 - DynamoDB for persistence with schemaless fields during MVP
-- SQS DLQ for failed runs with retry policy
 - Token budget limits and cost alarms
 - Structured metrics (prefilter_pass, local_pass, fallback_rate, tokens)
+- Direct processing without message queues (simplified architecture)
 
 ## Phase Checkpoints
 

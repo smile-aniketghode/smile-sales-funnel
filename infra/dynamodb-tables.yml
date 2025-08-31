@@ -1,0 +1,193 @@
+# DynamoDB Table Definitions for SMILe Sales Funnel
+# CloudFormation template for creating required tables
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB tables for SMILe Sales Funnel system'
+
+Resources:
+  # Tasks table - stores extracted tasks from emails
+  TasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-tasks'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: SMILe-Sales-Funnel
+        - Key: Component
+          Value: Tasks
+
+  # Deals table - stores extracted deals from emails
+  DealsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-deals'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: created_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-created_at-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: created_at
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: SMILe-Sales-Funnel
+        - Key: Component
+          Value: Deals
+
+  # EmailLog table - tracks processed emails for idempotency
+  EmailLogTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-email-log'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: message_id_hash
+          AttributeType: S
+        - AttributeName: processed_at
+          AttributeType: S
+      KeySchema:
+        - AttributeName: message_id_hash
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: processed_at-index
+          KeySchema:
+            - AttributeName: processed_at
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: SMILe-Sales-Funnel
+        - Key: Component
+          Value: EmailLog
+
+  # People table - stores contact information
+  PeopleTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-people'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: SMILe-Sales-Funnel
+        - Key: Component
+          Value: People
+
+  # Companies table - stores company information
+  CompaniesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${AWS::StackName}-companies'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: domain
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: domain-index
+          KeySchema:
+            - AttributeName: domain
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Project
+          Value: SMILe-Sales-Funnel
+        - Key: Component
+          Value: Companies
+
+Outputs:
+  TasksTableName:
+    Description: Name of the Tasks table
+    Value: !Ref TasksTable
+    Export:
+      Name: !Sub '${AWS::StackName}-tasks-table'
+
+  DealsTableName:
+    Description: Name of the Deals table
+    Value: !Ref DealsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-deals-table'
+
+  EmailLogTableName:
+    Description: Name of the EmailLog table
+    Value: !Ref EmailLogTable
+    Export:
+      Name: !Sub '${AWS::StackName}-email-log-table'
+
+  PeopleTableName:
+    Description: Name of the People table
+    Value: !Ref PeopleTable
+    Export:
+      Name: !Sub '${AWS::StackName}-people-table'
+
+  CompaniesTableName:
+    Description: Name of the Companies table
+    Value: !Ref CompaniesTable
+    Export:
+      Name: !Sub '${AWS::StackName}-companies-table'
