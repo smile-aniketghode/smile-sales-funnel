@@ -16,6 +16,7 @@ from .nodes import (
     EmitEventNode
 )
 from ..models import EmailLog, PrefilterResult, ProcessingStatus
+from ..utils import extract_text_content, extract_email_address
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +125,10 @@ class EmailProcessingWorkflow:
             email_msg = email.message_from_string(mime_content)
             message_id = email_msg.get('Message-ID', f"unknown-{int(time.time())}")
             subject = email_msg.get('Subject', '')
-            sender_email = self._extract_email_address(email_msg.get('From', ''))
+            sender_email = extract_email_address(email_msg.get('From', ''))
             
             # Generate message hash for idempotency
-            content = self._extract_text_content(email_msg)
+            content = extract_text_content(email_msg)
             message_hash = EmailLog.generate_message_hash(message_id, content)
             
             # Create initial state
@@ -229,40 +230,3 @@ class EmailProcessingWorkflow:
                 }
             }
     
-    def _extract_text_content(self, email_msg) -> str:
-        """Extract text content from email message"""
-        content_parts = []
-        
-        if email_msg.is_multipart():
-            for part in email_msg.walk():
-                if part.get_content_type() == "text/plain":
-                    try:
-                        content_parts.append(part.get_payload(decode=True).decode('utf-8'))
-                    except Exception:
-                        continue
-        else:
-            if email_msg.get_content_type() == "text/plain":
-                try:
-                    payload = email_msg.get_payload()
-                    if isinstance(payload, str):
-                        content_parts.append(payload)
-                    else:
-                        content_parts.append(payload.decode('utf-8'))
-                except Exception:
-                    pass
-        
-        return "\n\n".join(content_parts)
-    
-    def _extract_email_address(self, from_header: str) -> str:
-        """Extract email address from From header"""
-        if '<' in from_header and '>' in from_header:
-            start = from_header.find('<') + 1
-            end = from_header.find('>')
-            return from_header[start:end].lower()
-        else:
-            # Simple fallback
-            parts = from_header.split()
-            for part in parts:
-                if '@' in part:
-                    return part.lower()
-        return from_header.lower()

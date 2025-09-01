@@ -5,6 +5,7 @@ from email.message import EmailMessage
 
 from ...models import PrefilterResult, ProcessingStatus
 from ...services.prefilter import PrefilterService
+from ...utils import extract_text_content
 from ..state import EmailProcessingState
 
 
@@ -29,7 +30,7 @@ class PreFilterNode:
             email_msg = email.message_from_string(state["raw_content"])
             
             # Extract text content
-            content = self._extract_text_content(email_msg)
+            content = extract_text_content(email_msg)
             
             # Apply prefilter
             filter_result, filtered_content = await self.prefilter_service.process(content, email_msg)
@@ -58,26 +59,3 @@ class PreFilterNode:
                 "business_score": 0.0
             }
     
-    def _extract_text_content(self, email_msg: EmailMessage) -> str:
-        """Extract text content from email message"""
-        content_parts = []
-        
-        if email_msg.is_multipart():
-            for part in email_msg.walk():
-                if part.get_content_type() == "text/plain":
-                    try:
-                        content_parts.append(part.get_payload(decode=True).decode('utf-8'))
-                    except Exception:
-                        continue
-        else:
-            if email_msg.get_content_type() == "text/plain":
-                try:
-                    payload = email_msg.get_payload()
-                    if isinstance(payload, str):
-                        content_parts.append(payload)
-                    else:
-                        content_parts.append(payload.decode('utf-8'))
-                except Exception:
-                    pass
-        
-        return "\n\n".join(content_parts)
