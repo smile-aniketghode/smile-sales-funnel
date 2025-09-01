@@ -6,7 +6,6 @@ from typing import Dict, Any, Literal
 import logging
 
 from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolExecutor
 
 from .state import EmailProcessingState
 from .nodes import (
@@ -27,16 +26,16 @@ class EmailProcessingWorkflow:
     def __init__(
         self, 
         confidence_threshold: float = 0.8,
-        llm_model: str = "gpt-3.5-turbo",
-        llm_base_url: str = None
+        llm_model: str = "llama3.2",
+        llm_base_url: str = "http://localhost:11434"
     ):
         """
         Initialize the workflow
         
         Args:
             confidence_threshold: Confidence threshold for auto-approval
-            llm_model: LLM model to use for extraction
-            llm_base_url: Base URL for LLM API (for local models)
+            llm_model: Ollama model to use for extraction
+            llm_base_url: Base URL for Ollama API
         """
         self.confidence_threshold = confidence_threshold
         
@@ -238,13 +237,17 @@ class EmailProcessingWorkflow:
             for part in email_msg.walk():
                 if part.get_content_type() == "text/plain":
                     try:
-                        content_parts.append(part.get_content())
+                        content_parts.append(part.get_payload(decode=True).decode('utf-8'))
                     except Exception:
                         continue
         else:
             if email_msg.get_content_type() == "text/plain":
                 try:
-                    content_parts.append(email_msg.get_content())
+                    payload = email_msg.get_payload()
+                    if isinstance(payload, str):
+                        content_parts.append(payload)
+                    else:
+                        content_parts.append(payload.decode('utf-8'))
                 except Exception:
                     pass
         

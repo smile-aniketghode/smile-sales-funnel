@@ -15,7 +15,7 @@ class PersistNode:
     def __init__(self):
         self.db_client = DynamoDBClient()
     
-    def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
+    async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
         Persist tasks and deals to database
         

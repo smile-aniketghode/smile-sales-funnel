@@ -1,6 +1,6 @@
 from typing import Dict, Any, List
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 import json
@@ -41,13 +41,13 @@ class ExtractionResult(BaseModel):
 
 
 class ExtractLocalNode:
-    """LangGraph node for local LLM extraction using OpenAI (or local compatible API)"""
+    """LangGraph node for local LLM extraction using Ollama"""
     
-    def __init__(self, model_name: str = "gpt-3.5-turbo", base_url: str = None):
-        # Can point to local OpenAI-compatible API like llama.cpp server
-        self.llm = ChatOpenAI(
+    def __init__(self, model_name: str = "llama3.2", base_url: str = "http://localhost:11434"):
+        # Use local Ollama for LLM processing
+        self.llm = ChatOllama(
             model=model_name,
-            base_url=base_url,  # e.g., "http://localhost:8080/v1" for local
+            base_url=base_url,  # Default Ollama API endpoint
             temperature=0.1,  # Low temperature for consistent extraction
         )
         
@@ -62,7 +62,7 @@ class ExtractLocalNode:
         # Create extraction chain
         self.chain = self.prompt | self.llm | self.parser
     
-    def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
+    async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
         Execute LLM extraction
         
@@ -87,25 +87,75 @@ class ExtractLocalNode:
             logger.info(f"Starting LLM extraction for email: {state['message_id']}")
             
             # Call LLM
-            result = self.chain.invoke(llm_input)
+            result = await self.chain.ainvoke(llm_input)
             
             # Extract token usage (if available)
             tokens_used = 0  # Would need to implement token counting
             
-            # Convert to dict format
-            extraction_data = {
-                "tasks": [task.dict() for task in result.tasks],
-                "deals": [deal.dict() for deal in result.deals],
-                "agent": self.llm.model_name,
-                "tokens_used": tokens_used
-            }
+            logger.info(f"LLM returned: {type(result)} - {result}")
             
-            logger.info(f"LLM extraction complete. Tasks: {len(result.tasks)}, Deals: {len(result.deals)}")
+            # Handle both dict and Pydantic model results
+            if isinstance(result, dict):
+                # LLM returned dict - extract tasks and deals
+                tasks_data = []
+                deals_data = []
+                
+                for task_raw in result.get("tasks", []):
+                    # Convert simplified format to full task format
+                    # Extract title and description from available fields
+                    title = task_raw.get("title", task_raw.get("text", task_raw.get("snippet", "Unknown task")))
+                    description = task_raw.get("description", task_raw.get("snippet", task_raw.get("text", title)))
+                    
+                    task_data = {
+                        "title": title,
+                        "description": description if description else title,  # Ensure description is not empty
+                        "priority": task_raw.get("priority", "medium"),
+                        "due_date": task_raw.get("due_date", ""),
+                        "confidence": task_raw.get("confidence", 0.5),
+                        "snippet": task_raw.get("snippet", task_raw.get("text", title))
+                    }
+                    tasks_data.append(task_data)
+                
+                for deal_raw in result.get("deals", []):
+                    # Convert simplified format to full deal format
+                    # Extract title and description from available fields
+                    title = deal_raw.get("title", deal_raw.get("text", deal_raw.get("snippet", "Unknown deal")))
+                    description = deal_raw.get("description", deal_raw.get("snippet", deal_raw.get("text", title)))
+                    
+                    deal_data = {
+                        "title": title,
+                        "description": description if description else title,  # Ensure description is not empty
+                        "value": deal_raw.get("value", 0.0),
+                        "currency": deal_raw.get("currency", "USD"),
+                        "stage": deal_raw.get("stage", "lead"),
+                        "probability": deal_raw.get("probability", 50),
+                        "confidence": deal_raw.get("confidence", 0.5),
+                        "snippet": deal_raw.get("snippet", deal_raw.get("text", title))
+                    }
+                    deals_data.append(deal_data)
+                
+                # Create extraction data
+                extraction_data = {
+                    "tasks": tasks_data,
+                    "deals": deals_data,
+                    "agent": self.llm.model,
+                    "tokens_used": tokens_used
+                }
+            else:
+                # Pydantic model result
+                extraction_data = {
+                    "tasks": [task.dict() for task in result.tasks],
+                    "deals": [deal.dict() for deal in result.deals],
+                    "agent": self.llm.model,
+                    "tokens_used": tokens_used
+                }
+            
+            logger.info(f"LLM extraction complete. Tasks: {len(extraction_data['tasks'])}, Deals: {len(extraction_data['deals'])}")
             
             return {
                 "extraction_result": extraction_data,
                 "tokens_used": tokens_used,
-                "agent_used": self.llm.model_name
+                "agent_used": self.llm.model
             }
             
         except Exception as e:

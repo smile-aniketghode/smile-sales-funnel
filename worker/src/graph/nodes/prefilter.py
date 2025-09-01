@@ -14,7 +14,7 @@ class PreFilterNode:
     def __init__(self):
         self.prefilter_service = PrefilterService()
     
-    def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
+    async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
         Execute prefiltering logic
         
@@ -32,7 +32,7 @@ class PreFilterNode:
             content = self._extract_text_content(email_msg)
             
             # Apply prefilter
-            filter_result, filtered_content = self.prefilter_service.process(content, email_msg)
+            filter_result, filtered_content = await self.prefilter_service.process(content, email_msg)
             business_score = self.prefilter_service._calculate_business_score(content, email_msg)
             
             # Update state
@@ -66,13 +66,17 @@ class PreFilterNode:
             for part in email_msg.walk():
                 if part.get_content_type() == "text/plain":
                     try:
-                        content_parts.append(part.get_content())
+                        content_parts.append(part.get_payload(decode=True).decode('utf-8'))
                     except Exception:
                         continue
         else:
             if email_msg.get_content_type() == "text/plain":
                 try:
-                    content_parts.append(email_msg.get_content())
+                    payload = email_msg.get_payload()
+                    if isinstance(payload, str):
+                        content_parts.append(payload)
+                    else:
+                        content_parts.append(payload.decode('utf-8'))
                 except Exception:
                     pass
         

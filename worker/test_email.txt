@@ -1,0 +1,20 @@
+Subject: Partnership Proposal - $50,000 Budget Approved
+From: john.doe@acme-corp.com
+Message-ID: <test-email-001@acme-corp.com>
+Date: Mon, 31 Aug 2025 10:30:00 -0700
+
+Hi there,
+
+We've been impressed with your team's work and would like to discuss a potential partnership opportunity. 
+
+Our board has approved a $50,000 budget for this project, and we're looking to get started as soon as possible. Could you please send us a detailed proposal by Friday?
+
+We'd also like to schedule a follow-up call next week to discuss the timeline and deliverables. Let me know your availability.
+
+Looking forward to working together!
+
+Best regards,
+John Doe
+VP of Business Development
+Acme Corp
+john.doe@acme-corp.com
