@@ -1,23 +1,251 @@
 import React from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AIInbox } from './pages/AIInbox';
 import './App.css';
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AIInbox />
-    </QueryClientProvider>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-8">
+          <h1 className="text-2xl font-bold">🎯 SMILe Sales Funnel - AI Inbox</h1>
+          <p>Manual email processing for stakeholder testing</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-4">Upload Email for AI Processing</h2>
+          <div 
+            className="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-lg p-8 text-center transition-colors duration-200 drag-drop-zone"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              accept=".txt,.eml,.msg"
+              onChange={handleFileUpload}
+            />
+            <div className="mb-4">
+              <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <label
+              htmlFor="file-upload"
+              className="cursor-pointer text-blue-600 hover:text-blue-500 font-medium text-lg"
+            >
+              📎 Drag & drop or click to upload
+            </label>
+            <p className="text-gray-500 mt-2">Support: .txt, .eml, .msg files</p>
+            <p className="text-gray-400 text-sm mt-2">AI will extract tasks and deals automatically</p>
+          </div>
+          <div id="result" className="mt-4 p-4 bg-gray-100 rounded hidden">
+            <p className="text-sm font-medium">Processing results will appear here...</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-export default App
+function handleDragEnter(e: React.DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  const zone = e.currentTarget as HTMLElement;
+  zone.classList.add('border-blue-500', 'bg-blue-50');
+}
+
+function handleDragLeave(e: React.DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  const zone = e.currentTarget as HTMLElement;
+  zone.classList.remove('border-blue-500', 'bg-blue-50');
+}
+
+function handleDragOver(e: React.DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function handleDrop(e: React.DragEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const zone = e.currentTarget as HTMLElement;
+  zone.classList.remove('border-blue-500', 'bg-blue-50');
+  
+  const files = e.dataTransfer.files;
+  if (files && files[0]) {
+    processFile(files[0]);
+  }
+}
+
+async function handleFileUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  processFile(file);
+}
+
+async function processFile(file: File) {
+  const resultDiv = document.getElementById('result')!;
+  resultDiv.className = 'mt-4 p-4 bg-blue-100 rounded';
+  resultDiv.innerHTML = `
+    <div class="flex items-center">
+      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+      <p>🔄 Processing "${file.name}" with AI...</p>
+    </div>
+  `;
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('http://localhost:8000/ingestEmail', {
+      method: 'POST',
+      body: formData,
+    });
+
+    const result = await response.json();
+    
+    if (result.status === 'success') {
+      const tasks = result.tasks || [];
+      const deals = result.deals || [];
+      
+      let tasksHTML = '';
+      let dealsHTML = '';
+      
+      if (tasks.length > 0) {
+        tasksHTML = `
+          <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+              📋 Extracted Tasks (${tasks.length})
+            </h4>
+            <div class="space-y-3">
+              ${tasks.map(task => `
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                      <h5 class="font-medium text-blue-900">${task.title}</h5>
+                      <p class="text-sm text-blue-700 mt-1">${task.description}</p>
+                      <p class="text-xs text-blue-600 mt-2 italic">"${task.audit_snippet}"</p>
+                    </div>
+                    <div class="ml-4 text-right">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        task.confidence >= 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }">
+                        ${Math.round(task.confidence * 100)}% confidence
+                      </span>
+                      <p class="text-xs text-gray-500 mt-1">
+                        ${task.status === 'accepted' ? '✅ Auto-approved' : '⏳ Needs review'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      if (deals.length > 0) {
+        dealsHTML = `
+          <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+              💰 Potential Deals (${deals.length})
+            </h4>
+            <div class="space-y-3">
+              ${deals.map(deal => `
+                <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
+                  <div class="flex justify-between items-start">
+                    <div class="flex-1">
+                      <h5 class="font-medium text-green-900">${deal.title}</h5>
+                      <p class="text-sm text-green-700 mt-1">${deal.description}</p>
+                      <p class="text-xs text-green-600 mt-2 italic">"${deal.audit_snippet}"</p>
+                      <div class="flex items-center space-x-4 mt-2 text-sm text-green-600">
+                        <span>Stage: ${deal.stage}</span>
+                        <span>Probability: ${deal.probability}%</span>
+                        ${deal.value ? `<span class="font-medium">₹${formatIndianCurrency(deal.value)}</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="ml-4 text-right">
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        deal.confidence >= 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      }">
+                        ${Math.round(deal.confidence * 100)}% confidence
+                      </span>
+                      <p class="text-xs text-gray-500 mt-1">
+                        ${deal.status === 'accepted' ? '✅ Auto-approved' : '⏳ Needs review'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+      
+      resultDiv.className = 'mt-6 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden';
+      resultDiv.innerHTML = `
+        <div class="bg-gradient-to-r from-blue-500 to-green-500 px-6 py-4">
+          <h3 class="text-xl font-bold text-white flex items-center">
+            🤖 AI Processing Complete
+            <span class="ml-2 text-blue-100 text-sm font-normal">(${result.processing_time_ms}ms)</span>
+          </h3>
+          <div class="flex items-center space-x-6 mt-2 text-blue-100 text-sm">
+            <span>🎯 Business Score: ${Math.round((result.results?.business_score || 0) * 100)}%</span>
+            <span>🔍 AI Agent: ${result.tasks[0]?.agent || 'llama3.2'}</span>
+            <span>⚡ ${result.results?.prefilter_result === 'passed' ? 'Prefilter: Passed' : 'Prefilter: Failed'}</span>
+          </div>
+        </div>
+        <div class="p-6">
+          ${tasksHTML}
+          ${dealsHTML}
+          ${tasks.length === 0 && deals.length === 0 ? `
+            <div class="text-center py-8 text-gray-500">
+              <p class="text-lg">No tasks or deals were extracted from this email.</p>
+              <p class="text-sm mt-2">The email may not contain actionable business content.</p>
+            </div>
+          ` : ''}
+          <div class="mt-6 pt-4 border-t border-gray-200 bg-gray-50 rounded-lg p-4">
+            <h5 class="font-medium text-gray-700 mb-2">🔧 Processing Summary</h5>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+              <div><strong>High Confidence Items:</strong> ${(result.results?.high_confidence_tasks || 0) + (result.results?.high_confidence_deals || 0)}</div>
+              <div><strong>Total Extracted:</strong> ${tasks.length + deals.length}</div>
+              <div><strong>Processing Time:</strong> ${result.processing_time_ms}ms</div>
+              <div><strong>Auto-approved:</strong> ${tasks.filter(t => t.status === 'accepted').length + deals.filter(d => d.status === 'accepted').length}</div>
+            </div>
+            <p class="text-xs text-gray-500 mt-3">
+              💡 Items with ≥80% confidence are automatically approved. Lower confidence items require manual review.
+            </p>
+          </div>
+        </div>
+      `;
+    } else {
+      throw new Error('Processing failed');
+    }
+  } catch (error) {
+    resultDiv.className = 'mt-4 p-4 bg-red-100 border border-red-200 rounded';
+    resultDiv.innerHTML = `
+      <h3 class="font-bold text-red-800">❌ Processing Failed</h3>
+      <p class="text-red-700 text-sm mt-1">${error instanceof Error ? error.message : 'Unknown error'}</p>
+      <p class="text-red-600 text-xs mt-2">Make sure the AI worker service is running on port 8000</p>
+    `;
+  }
+}
+
+// Indian currency formatter (lakhs and crores)
+function formatIndianCurrency(value: number): string {
+  if (value >= 10000000) { // 1 crore
+    return `${(value / 10000000).toFixed(2)} Cr`;
+  } else if (value >= 100000) { // 1 lakh
+    return `${(value / 100000).toFixed(2)} L`;
+  } else if (value >= 1000) { // thousands
+    return `${(value / 1000).toFixed(0)}K`;
+  } else {
+    return value.toLocaleString('en-IN');
+  }
+}
+
+export default App;

@@ -1,0 +1,12 @@
+{
+  "name": "@smile-sales-funnel/infra",
+  "version": "0.1.0",
+  "description": "Infrastructure scripts for SMILe Sales Funnel",
+  "private": true,
+  "scripts": {
+    "create-tables": "node create-local-tables.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.450.0"
+  }
+}

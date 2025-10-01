@@ -2,6 +2,7 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from typing import Dict, Any, List, Optional
 import logging
+import os
 from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 
@@ -11,20 +12,38 @@ logger = logging.getLogger(__name__)
 
 
 class DynamoDBClient:
-    """DynamoDB client for persisting extracted data"""
-    
-    def __init__(self, region: str = "us-east-1", table_prefix: str = "smile-sales-funnel-dev"):
+    """DynamoDB client for persisting extracted data (supports local and AWS)"""
+
+    def __init__(self, region: str = "us-east-1", table_prefix: str = "smile-sales-funnel-dev", endpoint_url: Optional[str] = None):
         self.region = region
         self.table_prefix = table_prefix
-        
+
+        # Support local DynamoDB endpoint
+        if endpoint_url is None:
+            endpoint_url = os.getenv("DYNAMODB_ENDPOINT")
+
+        self.endpoint_url = endpoint_url
+        self.is_local = endpoint_url is not None
+
         # Initialize DynamoDB resource
-        self.dynamodb = boto3.resource('dynamodb', region_name=region)
-        
+        if self.is_local:
+            logger.info(f"Using local DynamoDB at {endpoint_url}")
+            self.dynamodb = boto3.resource(
+                'dynamodb',
+                region_name=region,
+                endpoint_url=endpoint_url,
+                aws_access_key_id='dummy',
+                aws_secret_access_key='dummy'
+            )
+        else:
+            logger.info(f"Using AWS DynamoDB in region {region}")
+            self.dynamodb = boto3.resource('dynamodb', region_name=region)
+
         # Table references
         self.tables = {
             'tasks': self.dynamodb.Table(f"{table_prefix}-tasks"),
             'deals': self.dynamodb.Table(f"{table_prefix}-deals"),
-            'email_log': self.dynamodb.Table(f"{table_prefix}-email-log"),
+            'email_log': self.dynamodb.Table(f"{table_prefix}-email-logs"),
             'people': self.dynamodb.Table(f"{table_prefix}-people"),
             'companies': self.dynamodb.Table(f"{table_prefix}-companies")
         }

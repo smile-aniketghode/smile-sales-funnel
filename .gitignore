@@ -106,5 +106,10 @@ wheels/
 .terraform.lock.hcl
 
 # Local development
-.env.example
-.local
+.local/
+*.pid
+
+# Python virtual environment
+venv/
+env/
+ENV/

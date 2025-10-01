@@ -4,31 +4,37 @@ import { taskAPI, dealAPI, statsAPI } from '../services/api';
 import { TaskCard } from '../components/TaskCard';
 import { DealCard } from '../components/DealCard';
 import { StatsCard } from '../components/StatsCard';
+import { EmailUpload } from '../components/EmailUpload';
 import { TaskStatus, DealStatus } from '../types/api';
 
 export const AIInbox: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tasks' | 'deals'>('tasks');
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const queryClient = useQueryClient();
 
   // Fetch statistics
-  const { data: stats } = useQuery({
+  const { data: stats, isError: statsError } = useQuery({
     queryKey: ['stats'],
     queryFn: () => statsAPI.getSummary(),
     refetchInterval: 30000, // Refresh every 30 seconds
+    retry: 1,
   });
 
   // Fetch draft tasks
-  const { data: tasksData, isLoading: tasksLoading } = useQuery({
+  const { data: tasksData, isLoading: tasksLoading, isError: tasksError } = useQuery({
     queryKey: ['tasks', 'draft'],
     queryFn: () => taskAPI.getTasks(TaskStatus.DRAFT),
     refetchInterval: 10000, // Refresh every 10 seconds
+    retry: 1,
   });
 
   // Fetch draft deals
-  const { data: dealsData, isLoading: dealsLoading } = useQuery({
+  const { data: dealsData, isLoading: dealsLoading, isError: dealsError } = useQuery({
     queryKey: ['deals', 'draft'],
     queryFn: () => dealAPI.getDeals(DealStatus.DRAFT),
     refetchInterval: 10000, // Refresh every 10 seconds
+    retry: 1,
   });
 
   // Task mutations
@@ -81,8 +87,48 @@ export const AIInbox: React.FC = () => {
     rejectDealMutation.mutate(dealId);
   };
 
+  // Direct email upload handler - calls worker service directly
+  const handleEmailUpload = async (file: File) => {
+    setIsUploading(true);
+    setUploadStatus(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:8000/ingestEmail', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.status === 'success') {
+        setUploadStatus(`✅ Success! Extracted ${result.results?.high_confidence_tasks || 0} tasks and ${result.results?.high_confidence_deals || 0} deals`);
+        // Refresh the data
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['deals'] });
+        queryClient.invalidateQueries({ queryKey: ['stats'] });
+      } else {
+        setUploadStatus(`⚠️ Processing completed but no items extracted`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadStatus(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      // Clear status after 10 seconds
+      setTimeout(() => setUploadStatus(null), 10000);
+    }
+  };
+
   const tasks = tasksData?.tasks || [];
   const deals = dealsData?.deals || [];
+  const apiDown = statsError && tasksError && dealsError;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -91,6 +137,24 @@ export const AIInbox: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Inbox</h1>
           <p className="text-gray-600">Review and manage AI-extracted tasks and deals from your emails</p>
+          
+          {/* API Status */}
+          {apiDown && (
+            <div className="mt-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+              <p className="font-bold">⚠️ API Connection Issue</p>
+              <p className="text-sm">Backend API is not responding. You can still upload emails for processing.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Email Upload */}
+        <div className="mb-8">
+          <EmailUpload onUpload={handleEmailUpload} isProcessing={isUploading} />
+          {uploadStatus && (
+            <div className="mt-4 p-4 bg-gray-100 rounded-lg text-center">
+              <p className="text-sm font-medium">{uploadStatus}</p>
+            </div>
+          )}
         </div>
 
         {/* Statistics */}

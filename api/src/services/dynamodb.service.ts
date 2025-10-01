@@ -17,13 +17,28 @@ export class DynamoDbService {
   private readonly tablePrefix: string;
 
   constructor() {
-    const client = new DynamoDBClient({
-      region: process.env.AWS_REGION || 'us-east-1',
-    });
-    
+    const endpoint = process.env.DYNAMODB_ENDPOINT;
+    const region = process.env.AWS_REGION || 'us-east-1';
+
+    // Support local DynamoDB endpoint
+    const clientConfig: any = { region };
+
+    if (endpoint) {
+      clientConfig.endpoint = endpoint;
+      clientConfig.credentials = {
+        accessKeyId: 'dummy',
+        secretAccessKey: 'dummy'
+      };
+      this.logger.log(`Using local DynamoDB at ${endpoint}`);
+    } else {
+      this.logger.log(`Using AWS DynamoDB in region ${region}`);
+    }
+
+    const client = new DynamoDBClient(clientConfig);
+
     this.docClient = DynamoDBDocumentClient.from(client);
     this.tablePrefix = process.env.TABLE_PREFIX || 'smile-sales-funnel-dev';
-    
+
     this.logger.log(`Initialized DynamoDB client with table prefix: ${this.tablePrefix}`);
   }
 

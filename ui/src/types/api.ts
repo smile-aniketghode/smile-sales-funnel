@@ -1,4 +1,4 @@
-// API response types matching NestJS backend
+// API response types
 export enum TaskStatus {
   DRAFT = 'draft',
   ACCEPTED = 'accepted',
@@ -49,7 +49,7 @@ export interface Deal {
   title: string;
   description: string;
   value?: number;
-  currency: string;
+  currency: string; // Default: INR
   status: DealStatus;
   stage: DealStage;
   probability: number;
@@ -62,12 +62,6 @@ export interface Deal {
   audit_snippet: string;
   created_at: string;
   updated_at: string;
-}
-
-export interface ApiResponse<T> {
-  status: 'success' | 'error';
-  data?: T;
-  message?: string;
 }
 
 export interface TasksResponse {

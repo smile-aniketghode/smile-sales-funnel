@@ -19,7 +19,8 @@
       "Bash(timeout 10s python:*)",
       "Bash(pkill:*)",
       "Bash(rm:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": []
   }

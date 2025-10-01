@@ -26,7 +26,7 @@ class Deal(BaseEntity):
     title: str = Field(..., min_length=1, max_length=200)
     description: str = Field(..., min_length=1)
     value: Optional[float] = Field(None, ge=0, description="Estimated deal value")
-    currency: str = Field(default="USD", description="Currency code")
+    currency: str = Field(default="INR", description="Currency code")
     status: DealStatus = Field(default=DealStatus.DRAFT)
     stage: DealStage = Field(default=DealStage.LEAD)
     probability: int = Field(default=50, ge=0, le=100, description="Win probability")

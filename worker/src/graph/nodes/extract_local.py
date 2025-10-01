@@ -126,7 +126,7 @@ class ExtractLocalNode:
                         "title": title,
                         "description": description if description else title,  # Ensure description is not empty
                         "value": deal_raw.get("value", 0.0),
-                        "currency": deal_raw.get("currency", "USD"),
+                        "currency": deal_raw.get("currency", "INR"),
                         "stage": deal_raw.get("stage", "lead"),
                         "probability": deal_raw.get("probability", 50),
                         "confidence": deal_raw.get("confidence", 0.5),
@@ -181,7 +181,8 @@ TASK EXTRACTION RULES:
 DEAL EXTRACTION RULES:
 - Only identify potential revenue opportunities with genuine buying interest
 - Must indicate monetary value, contract potential, or purchase intent
-- Examples: "Interested in $50K contract", "Budget approved for project", "Ready to purchase"
+- Examples: "Interested in ₹50L contract", "Budget approved for ₹25 lakh project", "Ready to purchase for ₹2 crore"
+- Indian currency context: Use INR/Rupees, understand lakhs (L) and crores (Cr)
 - Set confidence based on buying signals strength (0.0-1.0)
 
 OUTPUT REQUIREMENTS:
