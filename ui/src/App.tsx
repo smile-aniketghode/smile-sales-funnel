@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Pipeline } from './pages/Pipeline';
 import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
+import { Settings } from './pages/Settings';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -84,8 +85,20 @@ function Navigation() {
               </Link>
             </div>
           </div>
-          <div className="text-sm text-gray-500">
-            Phase 3 - Pipeline Kanban
+          <div className="flex items-center gap-4">
+            <Link
+              to="/settings"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                isActive('/settings')
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}
+            >
+              ⚙️ Settings
+            </Link>
+            <div className="text-sm text-gray-500">
+              Phase 3 - Gmail Integration
+            </div>
           </div>
         </div>
       </div>
@@ -352,6 +365,7 @@ function App() {
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/inbox" element={<AIInbox />} />
             <Route path="/upload" element={<UploadPage />} />
+            <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
       </BrowserRouter>

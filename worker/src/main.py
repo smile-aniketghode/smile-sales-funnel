@@ -10,6 +10,7 @@ from .graph.workflow import EmailProcessingWorkflow
 from .services.gmail_oauth import GmailOAuthService
 from .services.gmail_token_storage import GmailTokenStorage
 from .services.gmail_client import GmailClient
+from .services.gmail_poller import GmailPoller
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +46,22 @@ workflow = EmailProcessingWorkflow(
 gmail_oauth = GmailOAuthService()
 token_storage = GmailTokenStorage()
 gmail_client = GmailClient()
+gmail_poller = GmailPoller(workflow)
+
+# App lifecycle events
+@app.on_event("startup")
+async def startup_event():
+    """Start background Gmail polling on app startup."""
+    if os.getenv("GMAIL_POLLING_ENABLED", "true").lower() == "true":
+        await gmail_poller.start_polling()
+        logger.info("✅ Gmail background polling enabled")
+    else:
+        logger.info("⚠️  Gmail polling disabled (set GMAIL_POLLING_ENABLED=true to enable)")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Stop background Gmail polling on app shutdown."""
+    await gmail_poller.stop_polling()
 
 @app.get("/")
 async def health_check():
@@ -238,6 +255,40 @@ async def fetch_gmail_emails(
     except Exception as e:
         logger.error(f"Failed to fetch emails for {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/gmail/poll")
+async def manual_poll(
+    user_id: str = Query(...),
+    label_ids: Optional[list[str]] = Query(None)
+):
+    """Manually trigger Gmail polling for a user"""
+    try:
+        result = await gmail_poller.poll_user(user_id, label_ids)
+        return result
+    except Exception as e:
+        logger.error(f"Manual poll failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/gmail/polling/status")
+async def get_polling_status():
+    """Get Gmail polling status"""
+    return gmail_poller.get_polling_status()
+
+
+@app.post("/gmail/polling/start")
+async def start_polling():
+    """Start Gmail background polling"""
+    await gmail_poller.start_polling()
+    return {"message": "Gmail polling started", "status": "success"}
+
+
+@app.post("/gmail/polling/stop")
+async def stop_polling():
+    """Stop Gmail background polling"""
+    await gmail_poller.stop_polling()
+    return {"message": "Gmail polling stopped", "status": "success"}
 
 # ============================================================================
 # Email Processing Endpoints
