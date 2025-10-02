@@ -9,6 +9,7 @@ import logging
 from .graph.workflow import EmailProcessingWorkflow
 from .services.gmail_oauth import GmailOAuthService
 from .services.gmail_token_storage import GmailTokenStorage
+from .services.gmail_client import GmailClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +44,7 @@ workflow = EmailProcessingWorkflow(
 # Initialize Gmail OAuth services
 gmail_oauth = GmailOAuthService()
 token_storage = GmailTokenStorage()
+gmail_client = GmailClient()
 
 @app.get("/")
 async def health_check():
@@ -194,6 +196,47 @@ async def gmail_auth_disconnect(user_id: str = Query(...)):
 
     except Exception as e:
         logger.error(f"Disconnect failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# Gmail API Endpoints
+# ============================================================================
+
+@app.get("/gmail/labels")
+async def get_gmail_labels(user_id: str = Query(...)):
+    """Get all Gmail labels for a user"""
+    try:
+        labels = gmail_client.list_labels(user_id)
+        return {
+            "labels": labels,
+            "count": len(labels),
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Failed to get labels for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/gmail/fetch")
+async def fetch_gmail_emails(
+    user_id: str = Query(...),
+    label_ids: list[str] = Query(...),
+    max_results: int = Query(10)
+):
+    """Fetch emails from Gmail by label"""
+    try:
+        emails = gmail_client.fetch_emails_by_label(
+            user_id=user_id,
+            label_ids=label_ids,
+            max_results=max_results
+        )
+        return {
+            "emails": emails,
+            "count": len(emails),
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Failed to fetch emails for {user_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================

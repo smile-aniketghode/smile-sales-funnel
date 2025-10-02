@@ -34,8 +34,12 @@ This guide walks you through setting up Gmail OAuth integration for the SMILe Sa
    - Click **Save and Continue**
 
 5. **Scopes** screen:
-   - Click **Add or Remove Scopes**
-   - Search and add these scopes:
+   - **IMPORTANT**: You may NOT see the "Add or Remove Scopes" button - this is normal!
+   - Google Cloud Console sometimes hides this for new projects
+   - **Just click "Save and Continue"** - our code will request the scopes automatically
+
+   **Optional**: If you DO see "Add or Remove Scopes" button:
+   - Click it and search for these (but NOT required):
      - `https://www.googleapis.com/auth/gmail.readonly` (Read emails)
      - `https://www.googleapis.com/auth/gmail.labels` (Read labels)
      - `https://www.googleapis.com/auth/gmail.modify` (Modify labels)

@@ -112,4 +112,4 @@ wheels/
 # Python virtual environment
 venv/
 env/
-ENV/
+ENV/worker/client_secret_*.json
