@@ -40,7 +40,8 @@ class PersistNode:
             for task_data in high_conf_tasks:
                 try:
                     task = self._create_task_entity(
-                        task_data, 
+                        task_data,
+                        state["user_id"],
                         state["message_hash"],
                         state.get("agent_used", "unknown"),
                         TaskStatus.ACCEPTED  # Auto-accept high confidence
@@ -50,14 +51,15 @@ class PersistNode:
                 except Exception as e:
                     logger.error(f"Error creating high-confidence task: {e}")
                     continue
-            
+
             # Create and persist draft tasks
             draft_tasks = state.get("draft_tasks", [])
             for task_data in draft_tasks:
                 try:
                     task = self._create_task_entity(
                         task_data,
-                        state["message_hash"], 
+                        state["user_id"],
+                        state["message_hash"],
                         state.get("agent_used", "unknown"),
                         TaskStatus.DRAFT  # Requires human review
                     )
@@ -73,6 +75,7 @@ class PersistNode:
                 try:
                     deal = self._create_deal_entity(
                         deal_data,
+                        state["user_id"],
                         state["message_hash"],
                         state.get("agent_used", "unknown"),
                         DealStatus.ACCEPTED  # Auto-accept high confidence
@@ -82,15 +85,16 @@ class PersistNode:
                 except Exception as e:
                     logger.error(f"Error creating high-confidence deal: {e}")
                     continue
-            
+
             # Create and persist draft deals
             draft_deals = state.get("draft_deals", [])
             for deal_data in draft_deals:
                 try:
                     deal = self._create_deal_entity(
                         deal_data,
+                        state["user_id"],
                         state["message_hash"],
-                        state.get("agent_used", "unknown"), 
+                        state.get("agent_used", "unknown"),
                         DealStatus.DRAFT  # Requires human review
                     )
                     created_deals.append(deal)
@@ -144,14 +148,16 @@ class PersistNode:
             }
     
     def _create_task_entity(
-        self, 
-        task_data: Dict[str, Any], 
+        self,
+        task_data: Dict[str, Any],
+        user_id: str,
         source_email_id: str,
         agent: str,
         status: TaskStatus
     ) -> Task:
         """Create a Task entity from extracted data"""
         return Task(
+            user_id=user_id,
             title=task_data["title"],
             description=task_data["description"],
             priority=TaskPriority(task_data.get("priority", "medium")),
@@ -166,12 +172,14 @@ class PersistNode:
     def _create_deal_entity(
         self,
         deal_data: Dict[str, Any],
-        source_email_id: str, 
+        user_id: str,
+        source_email_id: str,
         agent: str,
         status: DealStatus
     ) -> Deal:
         """Create a Deal entity from extracted data"""
         return Deal(
+            user_id=user_id,
             title=deal_data["title"],
             description=deal_data["description"],
             value=deal_data.get("value", 0.0) or None,

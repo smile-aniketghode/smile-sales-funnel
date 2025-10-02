@@ -159,6 +159,7 @@ class EmailProcessingWorkflow:
                 "email_log": EmailLog(
                     message_id_hash=message_hash,
                     original_message_id=message_id,
+                    user_id=user_id or "default_user",
                     subject=subject[:500],
                     sender_email=sender_email,
                     prefilter_result=PrefilterResult.PASSED

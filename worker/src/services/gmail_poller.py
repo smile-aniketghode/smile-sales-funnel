@@ -150,7 +150,8 @@ class GmailPoller:
                     # Process through LangGraph workflow
                     result = await self.workflow.process_email(
                         email_data['mime_content'],
-                        source="gmail"
+                        source="gmail",
+                        user_id=user_id  # Pass the Gmail account owner
                     )
 
                     if result['status'] == 'success':
