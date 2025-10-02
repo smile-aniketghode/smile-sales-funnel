@@ -7,16 +7,42 @@
 
 ---
 
-## Step 1: Railway Setup (5 minutes)
+## Step 1: Railway Setup (15 minutes)
+
+### IMPORTANT: Monorepo Setup
+
+Railway needs each service deployed separately. You'll create **3 separate services** from the same repo.
+
+### Service 1: Worker (Python FastAPI)
 
 1. Go to [railway.app](https://railway.app)
-2. Click "Start a New Project"
-3. Choose "Deploy from GitHub repo"
-4. Select: `SMILe-Sales-Funnel` repository
-5. Railway will detect 3 services:
-   - `ui/` (React + Vite)
-   - `api/` (NestJS)
-   - `worker/` (Python FastAPI)
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select: `smile-aniketghode/smile-sales-funnel`
+4. **IMPORTANT**: Click "Configure" before deploying
+5. Set **Root Directory**: `worker`
+6. Set **Start Command**: `uvicorn src.main:app --host 0.0.0.0 --port $PORT`
+7. Click "Deploy"
+
+### Service 2: API (NestJS)
+
+1. In the same Railway project, click "New Service"
+2. Select "GitHub Repo" → `smile-aniketghode/smile-sales-funnel`
+3. **IMPORTANT**: Click "Configure"
+4. Set **Root Directory**: `api`
+5. Set **Build Command**: `npm install && npm run build`
+6. Set **Start Command**: `npm run start:prod`
+7. Click "Deploy"
+
+### Service 3: UI (React + Vite)
+
+1. Click "New Service" again
+2. Select "GitHub Repo" → `smile-aniketghode/smile-sales-funnel`
+3. **IMPORTANT**: Click "Configure"
+4. Set **Root Directory**: `ui`
+5. Set **Build Command**: `npm install && npm run build`
+6. Set **Start Command**: `npx serve -s dist -l $PORT`
+7. Add **Install Command**: `npm install -g serve`
+8. Click "Deploy"
 
 ---
 
