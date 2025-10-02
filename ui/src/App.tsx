@@ -356,6 +356,7 @@ function formatIndianCurrency(value: number): string {
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('user_id');
   });
@@ -363,7 +364,9 @@ function AppContent() {
   // Listen for authentication changes
   useEffect(() => {
     const checkAuth = () => {
-      setIsAuthenticated(!!localStorage.getItem('user_id'));
+      const hasUserId = !!localStorage.getItem('user_id');
+      setIsAuthenticated(hasUserId);
+      console.log('🔍 Auth check:', hasUserId ? 'Authenticated' : 'Not authenticated');
     };
 
     // Check on mount and location change
@@ -374,17 +377,24 @@ function AppContent() {
     return () => window.removeEventListener('storage', checkAuth);
   }, [location]);
 
+  // Redirect authenticated users away from login page
+  useEffect(() => {
+    if (isAuthenticated && location.pathname === '/login') {
+      console.log('✅ Already authenticated, redirecting to dashboard');
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, location.pathname, navigate]);
+
   // Show Login page if not authenticated
-  if (!isAuthenticated && location.pathname !== '/login') {
+  if (!isAuthenticated) {
     return <Login />;
   }
 
-  // Show authenticated app
+  // Show authenticated app with navigation
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <Routes>
-        <Route path="/login" element={<Login />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/contacts" element={<Contacts />} />
