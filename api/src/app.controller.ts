@@ -215,6 +215,25 @@ export class AppController {
     }
   }
 
+  @Get('contacts')
+  async getContacts(@Query('limit') limit?: string) {
+    try {
+      const limitNum = limit ? parseInt(limit) : 50;
+      const contacts = await this.dynamoDbService.getContacts(limitNum);
+
+      return {
+        contacts,
+        count: contacts.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch contacts: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('health')
   async healthCheck() {
     try {

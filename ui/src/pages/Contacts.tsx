@@ -1,86 +1,34 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { statsAPI } from '../services/api';
-
-interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  company: string;
-  role: string;
-  status: 'Active' | 'Prospect' | 'Lead';
-  lastActivity: string;
-  dealValue: number;
-}
+import { contactAPI } from '../services/api';
+import type { Contact } from '../types/api';
 
 export const Contacts: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('All Segments');
   const [statusFilter, setStatusFilter] = useState('All Status');
 
-  // Placeholder data - will be replaced with API call
-  const contacts: Contact[] = [
-    {
-      id: '1',
-      name: 'Rachel Kim',
-      email: 'rachel@acmecorp.com',
-      company: 'Acme Corp',
-      role: 'VP of Sales',
-      status: 'Active',
-      lastActivity: '2 hours ago',
-      dealValue: 125000,
-    },
-    {
-      id: '2',
-      name: 'John Davis',
-      email: 'john@globalind.com',
-      company: 'Global Industries',
-      role: 'Director',
-      status: 'Prospect',
-      lastActivity: '1 day ago',
-      dealValue: 95000,
-    },
-    {
-      id: '3',
-      name: 'Emma Wilson',
-      email: 'emma@techstart.io',
-      company: 'TechStart Inc',
-      role: 'CEO',
-      status: 'Active',
-      lastActivity: '5 hours ago',
-      dealValue: 78500,
-    },
-    {
-      id: '4',
-      name: 'Sarah Miller',
-      email: 'sarah@brightfuture.co',
-      company: 'Bright Future Co',
-      role: 'CTO',
-      status: 'Lead',
-      lastActivity: '3 days ago',
-      dealValue: 42000,
-    },
-    {
-      id: '5',
-      name: 'Alex Lee',
-      email: 'alex@innovate.com',
-      company: 'Innovate Solutions',
-      role: 'Product Manager',
-      status: 'Active',
-      lastActivity: 'Yesterday',
-      dealValue: 52000,
-    },
-    {
-      id: '6',
-      name: 'Mike Johnson',
-      email: 'mike@peakperf.com',
-      company: 'Peak Performance',
-      role: 'Operations Lead',
-      status: 'Prospect',
-      lastActivity: '2 days ago',
-      dealValue: 68000,
-    },
-  ];
+  const { data: contactsData, isLoading, error } = useQuery({
+    queryKey: ['contacts'],
+    queryFn: () => contactAPI.getContacts(50),
+    refetchInterval: 30000, // Refresh every 30s
+  });
+
+  const contacts = contactsData?.contacts || [];
+
+  // Calculate relative time from last_contact
+  const getRelativeTime = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
   const getInitials = (name: string): string => {
     return name
@@ -117,12 +65,15 @@ export const Contacts: React.FC = () => {
   };
 
   const formatIndianCurrency = (value: number): string => {
+    if (value === 0) return '₹0';
     if (value >= 10000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
+      return `₹${(value / 10000000).toFixed(2)} Cr`;
+    } else if (value >= 100000) {
+      return `₹${(value / 100000).toFixed(2)} L`;
     } else if (value >= 1000) {
-      return `$${(value / 1000).toFixed(0)}K`;
+      return `₹${(value / 1000).toFixed(0)}K`;
     }
-    return `$${value.toLocaleString()}`;
+    return `₹${value.toLocaleString('en-IN')}`;
   };
 
   const filteredContacts = contacts.filter((contact) => {
@@ -134,8 +85,32 @@ export const Contacts: React.FC = () => {
     const matchesStatus =
       statusFilter === 'All Status' || contact.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesSegment =
+      segmentFilter === 'All Segments' || contact.segment === segmentFilter;
+
+    return matchesSearch && matchesStatus && matchesSegment;
   });
+
+  if (isLoading) {
+    return (
+      <div className="max-w-[1600px] mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading contacts...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-[1600px] mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">Failed to load contacts. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1600px] mx-auto px-4 py-8">
@@ -165,8 +140,8 @@ export const Contacts: React.FC = () => {
         >
           <option>All Segments</option>
           <option>Enterprise</option>
+          <option>Mid-Market</option>
           <option>SMB</option>
-          <option>Startup</option>
         </select>
         <select
           value={statusFilter}
@@ -251,7 +226,7 @@ export const Contacts: React.FC = () => {
                     <div className="text-sm text-gray-900">{contact.company}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{contact.role}</div>
+                    <div className="text-sm text-gray-900">{contact.position}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -263,10 +238,10 @@ export const Contacts: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {contact.lastActivity}
+                    {getRelativeTime(contact.last_contact)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatIndianCurrency(contact.dealValue)}
+                    {formatIndianCurrency(contact.deal_value)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 cursor-pointer">
                     Edit

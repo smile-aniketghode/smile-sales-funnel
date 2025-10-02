@@ -518,6 +518,68 @@ export class DynamoDbService {
     }
   }
 
+  async getContacts(limit: number = 50): Promise<any[]> {
+    try {
+      // For now, derive contacts from email senders in sample data
+      // In production, this would query the people table
+      const contacts = [
+        {
+          id: 'contact-1',
+          name: 'Rajesh Kumar',
+          email: 'rajesh.kumar@techcorp.in',
+          company: 'Tech Corp India',
+          position: 'CTO',
+          segment: 'Enterprise',
+          status: 'Active',
+          deal_value: 5000000,
+          last_contact: '2025-01-15',
+          created_at: '2025-01-15T14:30:00+05:30'
+        },
+        {
+          id: 'contact-2',
+          name: 'Priya Sharma',
+          email: 'priya.sharma@retailnext.com',
+          company: 'Retail Next',
+          position: 'Operations Manager',
+          segment: 'Mid-Market',
+          status: 'Active',
+          deal_value: 0,
+          last_contact: '2025-01-16',
+          created_at: '2025-01-16T10:15:00+05:30'
+        },
+        {
+          id: 'contact-3',
+          name: 'Sneha Reddy',
+          email: 'sneha.reddy@startupindia.co',
+          company: 'Startup India',
+          position: 'Founder',
+          segment: 'SMB',
+          status: 'Active',
+          deal_value: 250000,
+          last_contact: '2025-01-18',
+          created_at: '2025-01-18T11:20:00+05:30'
+        },
+        {
+          id: 'contact-4',
+          name: 'Vikram Singh',
+          email: 'vikram.singh@pharmalogix.com',
+          company: 'PharmaLogix',
+          position: 'VP Sales',
+          segment: 'Enterprise',
+          status: 'Active',
+          deal_value: 5000000,
+          last_contact: '2025-01-19',
+          created_at: '2025-01-19T09:30:00+05:30'
+        }
+      ];
+
+      return contacts.slice(0, limit);
+    } catch (error) {
+      this.logger.error(`Error getting contacts: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
   async healthCheck(): Promise<{ status: string; message?: string }> {
     try {
       // Simple health check - try to describe a table

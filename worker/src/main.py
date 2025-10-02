@@ -1,11 +1,14 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse, JSONResponse
 import uvicorn
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import logging
 
 from .graph.workflow import EmailProcessingWorkflow
+from .services.gmail_oauth import GmailOAuthService
+from .services.gmail_token_storage import GmailTokenStorage
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,18 +40,165 @@ workflow = EmailProcessingWorkflow(
     llm_base_url=ollama_base_url
 )
 
+# Initialize Gmail OAuth services
+gmail_oauth = GmailOAuthService()
+token_storage = GmailTokenStorage()
+
 @app.get("/")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
         "service": "SMILe Sales Funnel Worker",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "llm_model": llm_model,
         "ollama_url": ollama_base_url,
         "confidence_threshold": confidence_threshold,
-        "message": "LangGraph + Ollama integration active"
+        "gmail_oauth_configured": bool(os.getenv("GMAIL_CLIENT_ID")),
+        "message": "LangGraph + Ollama + Gmail OAuth integration"
     }
+
+# ============================================================================
+# Gmail OAuth Endpoints
+# ============================================================================
+
+@app.get("/auth/gmail")
+async def gmail_auth_init(user_id: str = Query(..., description="User email or ID")):
+    """
+    Initiate Gmail OAuth flow
+    Returns authorization URL to redirect user to
+    """
+    try:
+        if not gmail_oauth.client_id:
+            raise HTTPException(
+                status_code=500,
+                detail="Gmail OAuth not configured. Set GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET."
+            )
+
+        # Generate auth URL with user_id as state
+        auth_url = gmail_oauth.get_authorization_url(state=user_id)
+
+        logger.info(f"Gmail OAuth initiated for user: {user_id}")
+
+        return {
+            "auth_url": auth_url,
+            "user_id": user_id,
+            "message": "Redirect user to auth_url to complete OAuth flow"
+        }
+
+    except Exception as e:
+        logger.error(f"Gmail OAuth init failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/auth/gmail/callback")
+async def gmail_auth_callback(
+    code: str = Query(...),
+    state: Optional[str] = Query(None)
+):
+    """
+    Gmail OAuth callback - exchanges code for tokens
+    """
+    try:
+        # Exchange code for tokens
+        token_data = gmail_oauth.exchange_code_for_tokens(code)
+
+        # Get user email from token
+        user_email = gmail_oauth.get_user_email(token_data)
+        if not user_email:
+            raise HTTPException(status_code=500, detail="Failed to get user email")
+
+        # Use state (user_id) if provided, otherwise use email
+        user_id = state or user_email
+
+        # Save tokens to DynamoDB
+        success = token_storage.save_token(user_id, token_data)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to save tokens")
+
+        logger.info(f"Gmail OAuth completed for: {user_email} (user_id: {user_id})")
+
+        # Redirect to success page in UI
+        return RedirectResponse(
+            url=f"http://localhost:5173/settings?gmail_connected=true&email={user_email}",
+            status_code=302
+        )
+
+    except Exception as e:
+        logger.error(f"Gmail OAuth callback failed: {e}")
+        # Redirect to error page
+        return RedirectResponse(
+            url=f"http://localhost:5173/settings?gmail_error={str(e)}",
+            status_code=302
+        )
+
+
+@app.get("/auth/gmail/status")
+async def gmail_auth_status(user_id: str = Query(...)):
+    """
+    Check Gmail connection status for a user
+    """
+    try:
+        token_data = token_storage.get_token(user_id)
+
+        if not token_data:
+            return {
+                "connected": False,
+                "user_id": user_id,
+                "email": None
+            }
+
+        # Check if token is expired
+        is_expired = gmail_oauth.is_token_expired(token_data)
+
+        # If expired, try to refresh
+        if is_expired and token_data.get('refresh_token'):
+            try:
+                refreshed_token = gmail_oauth.refresh_access_token(token_data)
+                token_storage.update_token(user_id, refreshed_token)
+                token_data = refreshed_token
+                is_expired = False
+                logger.info(f"Refreshed Gmail token for: {user_id}")
+            except Exception as e:
+                logger.error(f"Token refresh failed for {user_id}: {e}")
+
+        # Get user email
+        user_email = gmail_oauth.get_user_email(token_data) if not is_expired else None
+
+        return {
+            "connected": not is_expired,
+            "user_id": user_id,
+            "email": user_email,
+            "token_expired": is_expired,
+            "last_updated": token_data.get('updated_at')
+        }
+
+    except Exception as e:
+        logger.error(f"Status check failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/auth/gmail/disconnect")
+async def gmail_auth_disconnect(user_id: str = Query(...)):
+    """
+    Disconnect Gmail account (delete stored tokens)
+    """
+    try:
+        success = token_storage.delete_token(user_id)
+
+        if success:
+            logger.info(f"Gmail disconnected for user: {user_id}")
+            return {"message": "Gmail disconnected successfully", "user_id": user_id}
+        else:
+            raise HTTPException(status_code=500, detail="Failed to disconnect Gmail")
+
+    except Exception as e:
+        logger.error(f"Disconnect failed for {user_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# Email Processing Endpoints
+# ============================================================================
 
 @app.post("/ingestEmail")
 async def ingest_email_endpoint(file: UploadFile = File(...)) -> Dict[str, Any]:

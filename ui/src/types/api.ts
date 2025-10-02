@@ -89,3 +89,22 @@ export interface StatsResponse {
   generated_at: string;
   status: string;
 }
+
+export interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  company: string;
+  position: string;
+  segment: string;
+  status: string;
+  deal_value: number;
+  last_contact: string;
+  created_at: string;
+}
+
+export interface ContactsResponse {
+  contacts: Contact[];
+  count: number;
+  status: string;
+}

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Task, Deal, TasksResponse, DealsResponse, StatsResponse } from '../types/api';
+import type { Task, Deal, TasksResponse, DealsResponse, StatsResponse, ContactsResponse } from '../types/api';
 import { TaskStatus, DealStatus, DealStage } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -134,6 +134,17 @@ export const statsAPI = {
   // Get AI-powered insights
   getInsights: async (): Promise<{ insights: any[]; count: number; status: string }> => {
     const response = await apiClient.get('/insights');
+    return response.data;
+  },
+};
+
+export const contactAPI = {
+  // Get all contacts
+  getContacts: async (limit: number = 50): Promise<ContactsResponse> => {
+    const params = new URLSearchParams();
+    params.append('limit', limit.toString());
+
+    const response = await apiClient.get(`/contacts?${params.toString()}`);
     return response.data;
   },
 };

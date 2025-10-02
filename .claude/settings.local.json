@@ -50,7 +50,9 @@
       "Bash(for file in samples/*.txt)",
       "Bash(do echo \"Testing: $file\")",
       "Bash(done)",
-      "Bash(\"/Users/aniketghode/development/SMILe Sales Funnel/upload-all-samples.sh\")"
+      "Bash(\"/Users/aniketghode/development/SMILe Sales Funnel/upload-all-samples.sh\")",
+      "Bash(aws dynamodb scan:*)",
+      "Bash(for:*)"
     ],
     "deny": []
   }
