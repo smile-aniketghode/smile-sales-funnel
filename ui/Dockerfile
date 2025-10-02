@@ -1,16 +1,17 @@
-# React + Vite UI - Multi-stage build
+# UI Service Dockerfile (for Railway monorepo deployment)
+# Multi-stage build
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy UI package files
+COPY ui/package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
 
-# Copy application code
-COPY . .
+# Copy UI source code
+COPY ui/ ./
 
 # Build Vite app
 RUN npm run build
@@ -26,7 +27,7 @@ RUN npm install -g serve
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
-# Expose port
+# Expose port (Railway will set PORT env var)
 EXPOSE 5173
 
 # Serve static files

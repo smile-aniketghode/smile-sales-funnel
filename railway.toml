@@ -1,20 +1,14 @@
 # Railway monorepo configuration for SMILe Sales Funnel
 # Defines 3 services: worker, api, ui
 
-[build]
-builder = "DOCKERFILE"
+[services.worker]
+build.builder = "DOCKERFILE"
+build.dockerfilePath = "worker/Dockerfile"
 
-# Worker service (Python FastAPI)
-[service.worker]
-dockerfilePath = "Dockerfile.worker"
-autoDeploy = true
+[services.api]
+build.builder = "DOCKERFILE"
+build.dockerfilePath = "api/Dockerfile"
 
-# API service (NestJS)
-[service.api]
-dockerfilePath = "Dockerfile.api"
-autoDeploy = true
-
-# UI service (React+Vite)
-[service.ui]
-dockerfilePath = "Dockerfile.ui"
-autoDeploy = true
+[services.ui]
+build.builder = "DOCKERFILE"
+build.dockerfilePath = "ui/Dockerfile"
