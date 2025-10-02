@@ -129,18 +129,12 @@ export const Settings: React.FC = () => {
     },
   });
 
-  const handleConnectGmail = () => {
-    // Prompt for email to use as user_id for OAuth
-    const email = prompt('Enter your email address to connect Gmail:');
-    if (!email) return;
-
-    // Open OAuth flow
-    const authUrl = `${WORKER_API_BASE}/auth/gmail?user_id=${encodeURIComponent(email)}`;
-    fetch(authUrl)
-      .then(res => res.json())
-      .then(data => {
-        window.location.href = data.auth_url;
-      });
+  const handleReconnect = () => {
+    // Clear current auth and redirect to Login page for fresh OAuth flow
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('user_email');
+    setUserId(null);
+    window.location.href = '/';
   };
 
   const handleDisconnect = () => {
@@ -258,25 +252,25 @@ export const Settings: React.FC = () => {
           </div>
         ) : (
           <div>
-            {/* Not Connected */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center">
-                <span className="text-gray-400 font-semibold mr-2">○</span>
-                <span className="text-gray-700 font-medium">Not Connected</span>
+            {/* Not Connected - Edge Case */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center mb-2">
+                <span className="text-yellow-600 font-semibold mr-2">⚠</span>
+                <span className="text-yellow-900 font-medium">Gmail Not Connected</span>
               </div>
-              <p className="mt-2 text-sm text-gray-600">
-                Connect your Gmail account to start automatically processing emails
+              <p className="text-sm text-yellow-800">
+                Your Gmail account is not connected. Please log out and sign in again through the login page.
               </p>
             </div>
 
             <button
-              onClick={handleConnectGmail}
+              onClick={handleReconnect}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              Connect Gmail
+              Sign Out and Reconnect
             </button>
           </div>
         )}
