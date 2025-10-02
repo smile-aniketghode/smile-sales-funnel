@@ -16,15 +16,22 @@ export class AppController {
   }
 
   @Get('tasks/today')
-  async getTodaysTasks() {
+  async getTodaysTasks(@Query('user_id') userId: string) {
     try {
-      const tasks = await this.dynamoDbService.getTodaysTasks();
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const tasks = await this.dynamoDbService.getTodaysTasks(userId);
       return {
         tasks,
         count: tasks.length,
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch today's tasks: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -34,15 +41,20 @@ export class AppController {
 
   @Get('tasks')
   async getTasks(
+    @Query('user_id') userId: string,
     @Query('status') status?: TaskStatus,
     @Query('limit') limit?: string,
     @Query('lastKey') lastKey?: string
   ) {
     try {
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
       const limitNum = limit ? parseInt(limit) : 50;
       const lastKeyObj = lastKey ? JSON.parse(lastKey) : undefined;
 
-      const result = await this.dynamoDbService.getTasks(status, limitNum, lastKeyObj);
+      const result = await this.dynamoDbService.getTasks(userId, status, limitNum, lastKeyObj);
 
       return {
         tasks: result.items,
@@ -51,6 +63,9 @@ export class AppController {
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch tasks: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -59,9 +74,13 @@ export class AppController {
   }
 
   @Get('tasks/:id')
-  async getTaskById(@Param('id') id: string) {
+  async getTaskById(@Query('user_id') userId: string, @Param('id') id: string) {
     try {
-      const task = await this.dynamoDbService.getTaskById(id);
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const task = await this.dynamoDbService.getTaskById(userId, id);
 
       if (!task) {
         throw new HttpException('Task not found', HttpStatus.NOT_FOUND);
@@ -101,15 +120,22 @@ export class AppController {
   }
 
   @Get('deals/hot')
-  async getHotDeals() {
+  async getHotDeals(@Query('user_id') userId: string) {
     try {
-      const deals = await this.dynamoDbService.getHotDeals();
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const deals = await this.dynamoDbService.getHotDeals(userId);
       return {
         deals,
         count: deals.length,
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch hot deals: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -119,15 +145,20 @@ export class AppController {
 
   @Get('deals')
   async getDeals(
+    @Query('user_id') userId: string,
     @Query('status') status?: DealStatus,
     @Query('limit') limit?: string,
     @Query('lastKey') lastKey?: string
   ) {
     try {
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
       const limitNum = limit ? parseInt(limit) : 50;
       const lastKeyObj = lastKey ? JSON.parse(lastKey) : undefined;
 
-      const result = await this.dynamoDbService.getDeals(status, limitNum, lastKeyObj);
+      const result = await this.dynamoDbService.getDeals(userId, status, limitNum, lastKeyObj);
 
       return {
         deals: result.items,
@@ -136,6 +167,9 @@ export class AppController {
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch deals: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -144,9 +178,13 @@ export class AppController {
   }
 
   @Get('deals/:id')
-  async getDealById(@Param('id') id: string) {
+  async getDealById(@Query('user_id') userId: string, @Param('id') id: string) {
     try {
-      const deal = await this.dynamoDbService.getDealById(id);
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const deal = await this.dynamoDbService.getDealById(userId, id);
 
       if (!deal) {
         throw new HttpException('Deal not found', HttpStatus.NOT_FOUND);
@@ -186,15 +224,22 @@ export class AppController {
   }
 
   @Get('insights')
-  async getInsights() {
+  async getInsights(@Query('user_id') userId: string) {
     try {
-      const insights = await this.dynamoDbService.getInsights();
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const insights = await this.dynamoDbService.getInsights(userId);
       return {
         insights,
         count: insights.length,
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch insights: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -203,11 +248,18 @@ export class AppController {
   }
 
   @Get('stats/summary')
-  async getStatsSummary() {
+  async getStatsSummary(@Query('user_id') userId: string) {
     try {
-      const stats = await this.dynamoDbService.getStats();
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
+      const stats = await this.dynamoDbService.getStats(userId);
       return { ...stats, status: 'success' };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch stats: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -216,10 +268,14 @@ export class AppController {
   }
 
   @Get('contacts')
-  async getContacts(@Query('limit') limit?: string) {
+  async getContacts(@Query('user_id') userId: string, @Query('limit') limit?: string) {
     try {
+      if (!userId) {
+        throw new HttpException('user_id is required', HttpStatus.BAD_REQUEST);
+      }
+
       const limitNum = limit ? parseInt(limit) : 50;
-      const contacts = await this.dynamoDbService.getContacts(limitNum);
+      const contacts = await this.dynamoDbService.getContacts(userId, limitNum);
 
       return {
         contacts,
@@ -227,6 +283,9 @@ export class AppController {
         status: 'success'
       };
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         `Failed to fetch contacts: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR

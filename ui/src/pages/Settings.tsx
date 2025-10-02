@@ -52,6 +52,15 @@ export const Settings: React.FC = () => {
     refetchInterval: 10000, // Refresh every 10s
   });
 
+  // Store user_id in localStorage after successful OAuth
+  useEffect(() => {
+    if (gmailStatus?.connected && gmailStatus?.email) {
+      localStorage.setItem('user_id', gmailStatus.email);
+      localStorage.setItem('user_email', gmailStatus.email);
+      console.log('✅ User ID stored:', gmailStatus.email);
+    }
+  }, [gmailStatus]);
+
   // Fetch polling status
   const { data: pollingStatus } = useQuery<PollingStatus>({
     queryKey: ['gmail-polling-status'],

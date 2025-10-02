@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './pages/Dashboard';
 import { Pipeline } from './pages/Pipeline';
@@ -353,21 +353,40 @@ function formatIndianCurrency(value: number): string {
   }
 }
 
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Auth guard - redirect to settings if no user_id
+  useEffect(() => {
+    const userId = localStorage.getItem('user_id');
+
+    if (!userId && location.pathname !== '/settings') {
+      console.log('⚠️ No user_id found, redirecting to /settings');
+      navigate('/settings');
+    }
+  }, [location.pathname, navigate]);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/contacts" element={<Contacts />} />
+        <Route path="/inbox" element={<AIInbox />} />
+        <Route path="/upload" element={<UploadPage />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/pipeline" element={<Pipeline />} />
-            <Route path="/contacts" element={<Contacts />} />
-            <Route path="/inbox" element={<AIInbox />} />
-            <Route path="/upload" element={<UploadPage />} />
-            <Route path="/settings" element={<Settings />} />
-          </Routes>
-        </div>
+        <AppContent />
       </BrowserRouter>
     </QueryClientProvider>
   );

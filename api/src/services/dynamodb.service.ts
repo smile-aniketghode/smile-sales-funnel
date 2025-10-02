@@ -46,14 +46,14 @@ export class DynamoDbService {
     return `${this.tablePrefix}-${entity}`;
   }
 
-  async getTasks(status?: TaskStatus, limit: number = 50, lastKey?: any): Promise<{
+  async getTasks(userId: string, status?: TaskStatus, limit: number = 50, lastKey?: any): Promise<{
     items: Task[];
     lastKey?: any;
     count: number;
   }> {
     try {
       let command;
-      
+
       if (status) {
         // Query using GSI
         command = new QueryCommand({
@@ -67,24 +67,27 @@ export class DynamoDbService {
             ':status': status
           },
           ScanIndexForward: false, // Most recent first
-          Limit: limit,
+          Limit: limit * 2, // Fetch extra for filtering
           ExclusiveStartKey: lastKey
         });
       } else {
         // Scan all tasks (expensive - only for development)
         command = new ScanCommand({
           TableName: this.getTableName('tasks'),
-          Limit: limit,
+          Limit: limit * 2, // Fetch extra for filtering
           ExclusiveStartKey: lastKey
         });
       }
 
       const response: any = await this.docClient.send(command);
 
+      // Filter by user_id in application layer
+      const filteredItems = (response.Items || []).filter(item => item.user_id === userId);
+
       return {
-        items: response.Items as Task[] || [],
+        items: filteredItems.slice(0, limit) as Task[],
         lastKey: response.LastEvaluatedKey,
-        count: response.Count || 0
+        count: filteredItems.length
       };
 
     } catch (error) {
@@ -93,14 +96,14 @@ export class DynamoDbService {
     }
   }
 
-  async getDeals(status?: DealStatus, limit: number = 50, lastKey?: any): Promise<{
+  async getDeals(userId: string, status?: DealStatus, limit: number = 50, lastKey?: any): Promise<{
     items: Deal[];
     lastKey?: any;
     count: number;
   }> {
     try {
       let command;
-      
+
       if (status) {
         // Query using GSI
         command = new QueryCommand({
@@ -114,24 +117,27 @@ export class DynamoDbService {
             ':status': status
           },
           ScanIndexForward: false, // Most recent first
-          Limit: limit,
+          Limit: limit * 2, // Fetch extra for filtering
           ExclusiveStartKey: lastKey
         });
       } else {
         // Scan all deals (expensive - only for development)
         command = new ScanCommand({
           TableName: this.getTableName('deals'),
-          Limit: limit,
+          Limit: limit * 2, // Fetch extra for filtering
           ExclusiveStartKey: lastKey
         });
       }
 
       const response: any = await this.docClient.send(command);
 
+      // Filter by user_id in application layer
+      const filteredItems = (response.Items || []).filter(item => item.user_id === userId);
+
       return {
-        items: response.Items as Deal[] || [],
+        items: filteredItems.slice(0, limit) as Deal[],
         lastKey: response.LastEvaluatedKey,
-        count: response.Count || 0
+        count: filteredItems.length
       };
 
     } catch (error) {
@@ -140,7 +146,7 @@ export class DynamoDbService {
     }
   }
 
-  async getTaskById(taskId: string): Promise<Task | null> {
+  async getTaskById(userId: string, taskId: string): Promise<Task | null> {
     try {
       const command = new GetCommand({
         TableName: this.getTableName('tasks'),
@@ -148,6 +154,12 @@ export class DynamoDbService {
       });
 
       const response = await this.docClient.send(command);
+
+      // Verify ownership
+      if (response.Item && response.Item.user_id !== userId) {
+        return null; // Not authorized
+      }
+
       return response.Item as Task || null;
 
     } catch (error) {
@@ -156,7 +168,7 @@ export class DynamoDbService {
     }
   }
 
-  async getDealById(dealId: string): Promise<Deal | null> {
+  async getDealById(userId: string, dealId: string): Promise<Deal | null> {
     try {
       const command = new GetCommand({
         TableName: this.getTableName('deals'),
@@ -164,6 +176,12 @@ export class DynamoDbService {
       });
 
       const response = await this.docClient.send(command);
+
+      // Verify ownership
+      if (response.Item && response.Item.user_id !== userId) {
+        return null; // Not authorized
+      }
+
       return response.Item as Deal || null;
 
     } catch (error) {
@@ -242,7 +260,7 @@ export class DynamoDbService {
     }
   }
 
-  async getStats(): Promise<{
+  async getStats(userId: string): Promise<{
     summary: {
       draft_tasks: number;
       draft_deals: number;
@@ -261,10 +279,10 @@ export class DynamoDbService {
     try {
       // Get draft counts
       const [draftTasks, draftDeals, allTasks, allDeals] = await Promise.all([
-        this.getTasks(TaskStatus.DRAFT, 100),
-        this.getDeals(DealStatus.DRAFT, 100),
-        this.getTasks(undefined, 1000),
-        this.getDeals(undefined, 1000)
+        this.getTasks(userId, TaskStatus.DRAFT, 100),
+        this.getDeals(userId, DealStatus.DRAFT, 100),
+        this.getTasks(userId, undefined, 1000),
+        this.getDeals(userId, undefined, 1000)
       ]);
 
       // Calculate revenue (sum of all deal values)
@@ -340,10 +358,10 @@ export class DynamoDbService {
     }
   }
 
-  async getTodaysTasks(): Promise<any[]> {
+  async getTodaysTasks(userId: string): Promise<any[]> {
     try {
       // Get all accepted tasks
-      const result = await this.getTasks(TaskStatus.ACCEPTED, 1000);
+      const result = await this.getTasks(userId, TaskStatus.ACCEPTED, 1000);
 
       const now = new Date();
       now.setHours(0, 0, 0, 0);
@@ -395,10 +413,10 @@ export class DynamoDbService {
     }
   }
 
-  async getHotDeals(): Promise<any[]> {
+  async getHotDeals(userId: string): Promise<any[]> {
     try {
       // Get all deals that are not won/lost
-      const result = await this.getDeals(undefined, 1000);
+      const result = await this.getDeals(userId, undefined, 1000);
 
       // Filter for active deals with close dates
       const now = new Date();
@@ -444,13 +462,13 @@ export class DynamoDbService {
     }
   }
 
-  async getInsights(): Promise<any[]> {
+  async getInsights(userId: string): Promise<any[]> {
     try {
       const insights: any[] = [];
       const now = new Date();
 
       // Get all active deals for analysis
-      const dealsResult = await this.getDeals(undefined, 1000);
+      const dealsResult = await this.getDeals(userId, undefined, 1000);
       const activeDeals = dealsResult.items.filter((deal: any) =>
         deal.status !== DealStatus.WON && deal.status !== DealStatus.LOST
       );
@@ -518,10 +536,10 @@ export class DynamoDbService {
     }
   }
 
-  async getContacts(limit: number = 50): Promise<any[]> {
+  async getContacts(userId: string, limit: number = 50): Promise<any[]> {
     try {
       // For now, derive contacts from email senders in sample data
-      // In production, this would query the people table
+      // In production, this would query the people table with user_id filter
       const contacts = [
         {
           id: 'contact-1',

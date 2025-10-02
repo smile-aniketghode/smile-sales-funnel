@@ -4,6 +4,11 @@ import { TaskStatus, DealStatus, DealStage } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
+// Get current user from localStorage
+const getCurrentUser = (): string | null => {
+  return localStorage.getItem('user_id');
+};
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,10 +16,17 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor for debugging
+// Request interceptor for debugging and user_id injection
 apiClient.interceptors.request.use(
   (config) => {
-    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`);
+    const userId = getCurrentUser();
+
+    if (userId) {
+      // Add user_id to query parameters
+      config.params = { ...config.params, user_id: userId };
+    }
+
+    console.log(`[API] ${config.method?.toUpperCase()} ${config.url}`, config.params);
     return config;
   },
   (error) => {
