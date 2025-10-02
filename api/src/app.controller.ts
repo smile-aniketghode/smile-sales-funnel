@@ -15,6 +15,23 @@ export class AppController {
     return this.appService.getHello();
   }
 
+  @Get('tasks/today')
+  async getTodaysTasks() {
+    try {
+      const tasks = await this.dynamoDbService.getTodaysTasks();
+      return {
+        tasks,
+        count: tasks.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch today's tasks: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('tasks')
   async getTasks(
     @Query('status') status?: TaskStatus,
@@ -24,9 +41,9 @@ export class AppController {
     try {
       const limitNum = limit ? parseInt(limit) : 50;
       const lastKeyObj = lastKey ? JSON.parse(lastKey) : undefined;
-      
+
       const result = await this.dynamoDbService.getTasks(status, limitNum, lastKeyObj);
-      
+
       return {
         tasks: result.items,
         count: result.count,
@@ -45,11 +62,11 @@ export class AppController {
   async getTaskById(@Param('id') id: string) {
     try {
       const task = await this.dynamoDbService.getTaskById(id);
-      
+
       if (!task) {
         throw new HttpException('Task not found', HttpStatus.NOT_FOUND);
       }
-      
+
       return { task, status: 'success' };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -83,6 +100,23 @@ export class AppController {
     }
   }
 
+  @Get('deals/hot')
+  async getHotDeals() {
+    try {
+      const deals = await this.dynamoDbService.getHotDeals();
+      return {
+        deals,
+        count: deals.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch hot deals: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('deals')
   async getDeals(
     @Query('status') status?: DealStatus,
@@ -92,9 +126,9 @@ export class AppController {
     try {
       const limitNum = limit ? parseInt(limit) : 50;
       const lastKeyObj = lastKey ? JSON.parse(lastKey) : undefined;
-      
+
       const result = await this.dynamoDbService.getDeals(status, limitNum, lastKeyObj);
-      
+
       return {
         deals: result.items,
         count: result.count,
@@ -113,11 +147,11 @@ export class AppController {
   async getDealById(@Param('id') id: string) {
     try {
       const deal = await this.dynamoDbService.getDealById(id);
-      
+
       if (!deal) {
         throw new HttpException('Deal not found', HttpStatus.NOT_FOUND);
       }
-      
+
       return { deal, status: 'success' };
     } catch (error) {
       if (error instanceof HttpException) {
@@ -146,40 +180,6 @@ export class AppController {
       }
       throw new HttpException(
         `Failed to update deal: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  @Get('tasks/today')
-  async getTodaysTasks() {
-    try {
-      const tasks = await this.dynamoDbService.getTodaysTasks();
-      return {
-        tasks,
-        count: tasks.length,
-        status: 'success'
-      };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to fetch today's tasks: ${error.message}`,
-        HttpStatus.INTERNAL_SERVER_ERROR
-      );
-    }
-  }
-
-  @Get('deals/hot')
-  async getHotDeals() {
-    try {
-      const deals = await this.dynamoDbService.getHotDeals();
-      return {
-        deals,
-        count: deals.length,
-        status: 'success'
-      };
-    } catch (error) {
-      throw new HttpException(
-        `Failed to fetch hot deals: ${error.message}`,
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
