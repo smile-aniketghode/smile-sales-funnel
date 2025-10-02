@@ -27,7 +27,14 @@
       "Bash(source:*)",
       "Bash(open:*)",
       "Bash(docker start:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(git commit:*)",
+      "Read(//Users/aniketghode/Desktop/Sales Funnel Mockups/**)",
+      "Bash(git checkout:*)",
+      "Bash(npm run dev:*)",
+      "Bash(python3:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": []
   }

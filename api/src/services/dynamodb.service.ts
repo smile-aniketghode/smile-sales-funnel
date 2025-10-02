@@ -79,8 +79,8 @@ export class DynamoDbService {
         });
       }
 
-      const response = await this.docClient.send(command);
-      
+      const response: any = await this.docClient.send(command);
+
       return {
         items: response.Items as Task[] || [],
         lastKey: response.LastEvaluatedKey,
@@ -126,8 +126,8 @@ export class DynamoDbService {
         });
       }
 
-      const response = await this.docClient.send(command);
-      
+      const response: any = await this.docClient.send(command);
+
       return {
         items: response.Items as Deal[] || [],
         lastKey: response.LastEvaluatedKey,
