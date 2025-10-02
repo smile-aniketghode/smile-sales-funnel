@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './pages/Dashboard';
@@ -6,6 +6,7 @@ import { Pipeline } from './pages/Pipeline';
 import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
 import { Settings } from './pages/Settings';
+import { Login } from './pages/Login';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -354,23 +355,36 @@ function formatIndianCurrency(value: number): string {
 }
 
 function AppContent() {
-  const navigate = useNavigate();
   const location = useLocation();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return !!localStorage.getItem('user_id');
+  });
 
-  // Auth guard - redirect to settings if no user_id
+  // Listen for authentication changes
   useEffect(() => {
-    const userId = localStorage.getItem('user_id');
+    const checkAuth = () => {
+      setIsAuthenticated(!!localStorage.getItem('user_id'));
+    };
 
-    if (!userId && location.pathname !== '/settings') {
-      console.log('⚠️ No user_id found, redirecting to /settings');
-      navigate('/settings');
-    }
-  }, [location.pathname, navigate]);
+    // Check on mount and location change
+    checkAuth();
 
+    // Listen for storage events (in case user logs out in another tab)
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
+  }, [location]);
+
+  // Show Login page if not authenticated
+  if (!isAuthenticated && location.pathname !== '/login') {
+    return <Login />;
+  }
+
+  // Show authenticated app
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <Routes>
+        <Route path="/login" element={<Login />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/contacts" element={<Contacts />} />
