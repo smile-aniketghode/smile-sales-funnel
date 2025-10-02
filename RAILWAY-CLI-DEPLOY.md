@@ -65,18 +65,34 @@ railway link -p 91b50dbd-e508-4145-8cc6-a1fc750e863a
 
 ---
 
-## Step 5: Configure Services
+## Step 5: Create Services Manually
 
-Railway CLI should auto-detect your 3 services. Verify with:
+Railway doesn't auto-detect services from monorepo. You must **manually create each service**:
 
 ```bash
+# Create worker service from worker/ directory
+cd worker
+railway up
+
+# This will prompt you to create a new service
+# Name it: worker
+
+# Go back to root and create API service
+cd ../api
+railway up
+# Name it: api
+
+# Create UI service
+cd ../ui
+railway up
+# Name it: ui
+
+# Verify all services created
+cd ..
 railway status
 ```
 
-You should see:
-- `worker` (Python)
-- `api` (Node.js)
-- `ui` (Node.js)
+Now you should see all 3 services!
 
 ---
 
