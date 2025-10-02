@@ -2,13 +2,16 @@
 # Defines 3 services: worker, api, ui
 
 [service.worker]
-rootDir = "worker"
+root = "worker"
 dockerfilePath = "worker/Dockerfile"
+autoDeploy = true
 
 [service.api]
-rootDir = "api"
+root = "api"
 dockerfilePath = "api/Dockerfile"
+autoDeploy = true
 
 [service.ui]
-rootDir = "ui"
+root = "ui"
 dockerfilePath = "ui/Dockerfile"
+autoDeploy = true
