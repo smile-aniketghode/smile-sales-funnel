@@ -21,6 +21,7 @@ class EmailLog(BaseModel):
     """Email processing log for idempotency and audit"""
     message_id_hash: str = Field(..., description="SHA256 hash of message-id + content")
     original_message_id: str = Field(..., description="Original Gmail message ID")
+    user_id: str = Field(..., description="User/Gmail account that owns this email")
     subject: str = Field(..., max_length=500)
     sender_email: str = Field(..., description="Sender email address")
     processed_at: datetime = Field(default_factory=datetime.utcnow)

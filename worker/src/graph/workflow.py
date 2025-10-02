@@ -102,17 +102,19 @@ class EmailProcessingWorkflow:
         return "continue"
     
     async def process_email(
-        self, 
-        mime_content: str, 
-        source: str = "manual"
+        self,
+        mime_content: str,
+        source: str = "manual",
+        user_id: str = None
     ) -> Dict[str, Any]:
         """
         Process an email through the complete LangGraph pipeline
-        
+
         Args:
             mime_content: Raw MIME email content
             source: Source identifier
-            
+            user_id: User/Gmail account that owns this email
+
         Returns:
             Processing results
         """
@@ -136,6 +138,7 @@ class EmailProcessingWorkflow:
                 "sender_email": sender_email,
                 "raw_content": mime_content,
                 "source": source,
+                "user_id": user_id or "default_user",  # Fallback for backward compatibility
                 "message_hash": message_hash,
                 "start_time": start_time,
                 "processing_time_ms": 0,

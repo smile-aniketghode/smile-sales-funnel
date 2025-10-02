@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 class BaseEntity(BaseModel):
     """Base model for all entities with common fields"""
     id: str = Field(default_factory=lambda: str(uuid4()))
+    user_id: str = Field(..., description="User/Gmail account that owns this record")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

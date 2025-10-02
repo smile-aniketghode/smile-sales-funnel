@@ -5,13 +5,14 @@ from ..models import Task, Deal, EmailLog, PrefilterResult, ProcessingStatus
 
 class EmailProcessingState(TypedDict):
     """State object that flows through the LangGraph workflow"""
-    
+
     # Input data
     message_id: str
     subject: str
     sender_email: str
     raw_content: str
     source: str
+    user_id: str  # Gmail account/user that owns this email
     
     # Processing metadata
     message_hash: str
