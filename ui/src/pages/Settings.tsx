@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 const WORKER_API_BASE = 'http://localhost:8000';
-const USER_ID = 'aniketghode@gmail.com'; // In production, get from auth context
 
 interface GmailStatus {
   connected: boolean;
@@ -27,14 +26,25 @@ export const Settings: React.FC = () => {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Get user_id from localStorage (will be set after OAuth)
+  const [userId, setUserId] = useState<string | null>(() => localStorage.getItem('user_id'));
+
   // Check for OAuth callback params
   useEffect(() => {
     const connected = searchParams.get('gmail_connected');
     const error = searchParams.get('gmail_error');
+    const callbackEmail = searchParams.get('email');
 
-    if (connected === 'true') {
+    if (connected === 'true' && callbackEmail) {
+      // Store user_id immediately after OAuth callback
+      localStorage.setItem('user_id', callbackEmail);
+      localStorage.setItem('user_email', callbackEmail);
+      setUserId(callbackEmail);
+
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
+
+      console.log('✅ User ID stored after OAuth:', callbackEmail);
     } else if (error) {
       setErrorMessage(error || 'Failed to connect Gmail');
       setShowError(true);
@@ -42,24 +52,35 @@ export const Settings: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Fetch Gmail connection status
+  // Fetch Gmail connection status (only if we have a user_id)
   const { data: gmailStatus, isLoading: statusLoading } = useQuery<GmailStatus>({
-    queryKey: ['gmail-status', USER_ID],
+    queryKey: ['gmail-status', userId],
     queryFn: async () => {
-      const res = await fetch(`${WORKER_API_BASE}/auth/gmail/status?user_id=${USER_ID}`);
+      if (!userId) return { connected: false, email: null, token_expired: false, last_updated: '' };
+      const res = await fetch(`${WORKER_API_BASE}/auth/gmail/status?user_id=${userId}`);
       return res.json();
     },
+    enabled: !!userId, // Only fetch if we have a user_id
     refetchInterval: 10000, // Refresh every 10s
   });
 
-  // Store user_id in localStorage after successful OAuth
+  // Update localStorage if Gmail status changes
   useEffect(() => {
     if (gmailStatus?.connected && gmailStatus?.email) {
-      localStorage.setItem('user_id', gmailStatus.email);
-      localStorage.setItem('user_email', gmailStatus.email);
-      console.log('✅ User ID stored:', gmailStatus.email);
+      if (gmailStatus.email !== userId) {
+        localStorage.setItem('user_id', gmailStatus.email);
+        localStorage.setItem('user_email', gmailStatus.email);
+        setUserId(gmailStatus.email);
+        console.log('✅ User ID updated from status:', gmailStatus.email);
+      }
+    } else if (gmailStatus && !gmailStatus.connected) {
+      // Gmail disconnected, clear user_id
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_email');
+      setUserId(null);
+      console.log('⚠️ Gmail disconnected, user_id cleared');
     }
-  }, [gmailStatus]);
+  }, [gmailStatus, userId]);
 
   // Fetch polling status
   const { data: pollingStatus } = useQuery<PollingStatus>({
@@ -74,7 +95,8 @@ export const Settings: React.FC = () => {
   // Manual sync mutation
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${WORKER_API_BASE}/gmail/poll?user_id=${USER_ID}`, {
+      if (!userId) throw new Error('No user_id');
+      const res = await fetch(`${WORKER_API_BASE}/gmail/poll?user_id=${userId}`, {
         method: 'POST',
       });
       return res.json();
@@ -88,19 +110,28 @@ export const Settings: React.FC = () => {
   // Disconnect mutation
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${WORKER_API_BASE}/auth/gmail/disconnect?user_id=${USER_ID}`, {
+      if (!userId) throw new Error('No user_id');
+      const res = await fetch(`${WORKER_API_BASE}/auth/gmail/disconnect?user_id=${userId}`, {
         method: 'DELETE',
       });
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['gmail-status'] });
+      // Clear localStorage after disconnect
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('user_email');
+      setUserId(null);
     },
   });
 
   const handleConnectGmail = () => {
-    // Open OAuth flow in popup
-    const authUrl = `${WORKER_API_BASE}/auth/gmail?user_id=${USER_ID}`;
+    // Prompt for email to use as user_id for OAuth
+    const email = prompt('Enter your email address to connect Gmail:');
+    if (!email) return;
+
+    // Open OAuth flow
+    const authUrl = `${WORKER_API_BASE}/auth/gmail?user_id=${encodeURIComponent(email)}`;
     fetch(authUrl)
       .then(res => res.json())
       .then(data => {
@@ -286,11 +317,11 @@ export const Settings: React.FC = () => {
             </div>
           </div>
 
-          {pollingStatus.last_sync_times[USER_ID] && (
+          {userId && pollingStatus.last_sync_times[userId] && (
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Last Sync</p>
               <p className="text-sm text-blue-800">
-                {new Date(pollingStatus.last_sync_times[USER_ID]).toLocaleString()}
+                {new Date(userId && pollingStatus.last_sync_times[userId]).toLocaleString()}
               </p>
             </div>
           )}
