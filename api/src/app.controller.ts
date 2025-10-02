@@ -151,6 +151,23 @@ export class AppController {
     }
   }
 
+  @Get('deals/hot')
+  async getHotDeals() {
+    try {
+      const deals = await this.dynamoDbService.getHotDeals();
+      return {
+        deals,
+        count: deals.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch hot deals: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('stats/summary')
   async getStatsSummary() {
     try {

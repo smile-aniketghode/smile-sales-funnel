@@ -340,6 +340,55 @@ export class DynamoDbService {
     }
   }
 
+  async getHotDeals(): Promise<any[]> {
+    try {
+      // Get all deals that are not won/lost
+      const result = await this.getDeals(undefined, 1000);
+
+      // Filter for active deals with close dates
+      const now = new Date();
+      const activeDeals = result.items.filter((deal: any) => {
+        return (
+          deal.status !== DealStatus.WON &&
+          deal.status !== DealStatus.LOST &&
+          deal.expected_close_date
+        );
+      });
+
+      // Sort by:
+      // 1. Soonest close date (higher priority)
+      // 2. Highest confidence (secondary priority)
+      const sortedDeals = activeDeals.sort((a: any, b: any) => {
+        const dateA = new Date(a.expected_close_date);
+        const dateB = new Date(b.expected_close_date);
+
+        // First sort by close date (ascending - soonest first)
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA.getTime() - dateB.getTime();
+        }
+
+        // If same date, sort by confidence (descending - highest first)
+        return b.confidence - a.confidence;
+      });
+
+      // Return top 5 hot deals with company name extracted
+      return sortedDeals.slice(0, 5).map((deal: any) => ({
+        id: deal.id,
+        title: deal.title,
+        company_name: deal.company_id || 'Unknown Company', // Will improve with actual company lookup
+        value: deal.value,
+        expected_close_date: deal.expected_close_date,
+        confidence: Math.round((deal.confidence || 0) * 100),
+        stage: deal.stage,
+        probability: deal.probability || 50
+      }));
+
+    } catch (error) {
+      this.logger.error(`Error getting hot deals: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
   async healthCheck(): Promise<{ status: string; message?: string }> {
     try {
       // Simple health check - try to describe a table
@@ -353,9 +402,9 @@ export class DynamoDbService {
 
     } catch (error) {
       this.logger.error(`DynamoDB health check failed: ${error.message}`);
-      return { 
-        status: 'unhealthy', 
-        message: error.message 
+      return {
+        status: 'unhealthy',
+        message: error.message
       };
     }
   }

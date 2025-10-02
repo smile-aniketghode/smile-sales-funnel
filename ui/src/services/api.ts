@@ -99,6 +99,12 @@ export const dealAPI = {
   rejectDeal: async (id: string): Promise<{ message: string; status: string }> => {
     return dealAPI.updateDeal(id, { status: DealStatus.REJECTED });
   },
+
+  // Get hot deals (urgent deals closing soon)
+  getHotDeals: async (): Promise<{ deals: any[]; count: number; status: string }> => {
+    const response = await apiClient.get('/deals/hot');
+    return response.data;
+  },
 };
 
 export const statsAPI = {
