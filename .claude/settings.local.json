@@ -44,7 +44,12 @@
       "Bash(env LLM_PROVIDER=openrouter OPENROUTER_API_KEY=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 OPENROUTER_MODEL=\"mistralai/mistral-small-3.2-24b-instruct:free\" DYNAMODB_ENDPOINT=http://localhost:8001 AWS_REGION=local AWS_ACCESS_KEY_ID=dummy AWS_SECRET_ACCESS_KEY=dummy ./venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 8000)",
       "Bash(set -a)",
       "Bash(set +a)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(./venv/bin/pytest tests/test_models.py -v)",
+      "Bash(./test-e2e-openrouter.sh:*)",
+      "Bash(for file in samples/*.txt)",
+      "Bash(do echo \"Testing: $file\")",
+      "Bash(done)"
     ],
     "deny": []
   }

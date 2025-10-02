@@ -59,7 +59,7 @@ class Deal(BaseEntity):
     @validator('currency')
     def validate_currency(cls, v):
         # Simple currency validation - can be expanded
-        valid_currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD']
+        valid_currencies = ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'INR']
         if v.upper() not in valid_currencies:
             raise ValueError(f'Currency must be one of: {valid_currencies}')
         return v.upper()

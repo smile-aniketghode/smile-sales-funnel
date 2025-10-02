@@ -217,7 +217,13 @@ DEAL EXTRACTION RULES:
 - Only identify potential revenue opportunities with genuine buying interest
 - Must indicate monetary value, contract potential, or purchase intent
 - Examples: "Interested in ₹50L contract", "Budget approved for ₹25 lakh project", "Ready to purchase for ₹2 crore"
-- Indian currency context: Use INR/Rupees, understand lakhs (L) and crores (Cr)
+- **IMPORTANT - Deal Value Format:**
+  - Convert Indian currency to numeric INR (no symbols, no text)
+  - ₹1 Lakh (L) = 100000, ₹1 Crore (Cr) = 10000000
+  - Examples: "₹50L" → value: 5000000, "₹1.5 Cr" → value: 15000000, "₹2.5 lakhs" → value: 250000
+  - If range given (e.g., "₹50L to ₹1Cr"), use the lower value
+  - If multi-year total given (e.g., "₹50L first year, ₹1.5Cr over 3 years"), use first year value
+- Currency: Always "INR" for Indian Rupee deals
 - Deal stages: lead, contacted, demo, proposal, negotiation, closed_won
 - Set confidence based on buying signals strength (0.0-1.0)
 

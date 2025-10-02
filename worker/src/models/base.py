@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 from uuid import uuid4
+from decimal import Decimal
 from pydantic import BaseModel, Field
 
 
@@ -18,8 +19,11 @@ class BaseEntity(BaseModel):
     def to_dynamodb_item(self) -> dict:
         """Convert to DynamoDB item format"""
         item = self.model_dump()
-        # Convert datetime objects to ISO strings
+        # Convert datetime and float to DynamoDB-compatible types
         for key, value in item.items():
             if isinstance(value, datetime):
                 item[key] = value.isoformat()
+            elif isinstance(value, float):
+                # DynamoDB doesn't support float, convert to Decimal
+                item[key] = Decimal(str(value))
         return item
