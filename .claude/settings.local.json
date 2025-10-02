@@ -20,7 +20,14 @@
       "Bash(pkill:*)",
       "Bash(rm:*)",
       "Bash(git tag:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfeat(local): complete local-first demo setup for Phase 1\n\n## Local-First Architecture\n- Add DynamoDB Local integration (Docker-based)\n- Support local endpoint via DYNAMODB_ENDPOINT env variable\n- Zero AWS dependencies for Phase 1 development\n\n## One-Command Demo\n- Create start-local.sh for starting all services\n- Create stop-local.sh for clean shutdown\n- Create test-local.sh for automated E2E tests\n- Add Makefile with convenient commands (demo, start, stop, test, clean)\n\n## Infrastructure\n- Add infra/create-local-tables.js for DynamoDB table creation\n- Configure worker to use local DynamoDB endpoint\n- Configure API to use local DynamoDB endpoint\n- Add .env.local files for worker and API\n\n## Sample Data\n- Add 5 realistic business emails in samples/ directory\n  - deal-high-value.txt (₹50L-1.5Cr enterprise deal)\n  - deal-interest.txt (SMB inquiry)\n  - task-followup.txt (post-demo actions)\n  - task-meeting.txt (scheduling request)\n  - mixed.txt (complex email with multiple items)\n\n## Documentation\n- Add QUICKSTART.md (1-page getting started)\n- Add READY-TO-RUN.md (complete demo guide)\n- Add LOCAL-DEMO-README.md (detailed setup & troubleshooting)\n- Add LOCAL-FIRST-PLAN.md (architecture & strategy)\n- Add Phasewise Plan v2.md (roadmap with business goals)\n- Add FILES-CREATED.md (file inventory)\n\n## Configuration\n- Update .gitignore for local development files\n- Add .env.example template\n- Add environment configs for local development\n\n## Benefits\n- ✅ Zero cloud costs during development\n- ✅ Works completely offline (after setup)\n- ✅ Fast iteration cycle\n- ✅ Easy for team to clone and run\n- ✅ Identical API to AWS DynamoDB (easy migration)\n\n## Phase 1 Status\n- 95% complete - ready for first test run\n- All core features working locally\n- Sample data and tests ready\n- Documentation complete\n\n## Next Steps\n1. Run ''make demo'' to test\n2. Validate extraction quality\n3. Demo to stakeholders\n4. Plan Phase 2 (Gmail integration + AWS deployment)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(./start-local.sh:*)",
+      "Bash(cat:*)",
+      "Bash(source:*)",
+      "Bash(open:*)",
+      "Bash(docker start:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }
