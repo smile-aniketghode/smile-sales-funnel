@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { Task, Deal, TasksResponse, DealsResponse, StatsResponse } from '../types/api';
-import { TaskStatus, DealStatus } from '../types/api';
+import { TaskStatus, DealStatus, DealStage } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
@@ -116,6 +116,11 @@ export const dealAPI = {
   getHotDeals: async (): Promise<{ deals: any[]; count: number; status: string }> => {
     const response = await apiClient.get('/deals/hot');
     return response.data;
+  },
+
+  // Update deal stage (for pipeline drag & drop)
+  updateDealStage: async (id: string, stage: DealStage): Promise<{ message: string; status: string }> => {
+    return dealAPI.updateDeal(id, { stage });
   },
 };
 

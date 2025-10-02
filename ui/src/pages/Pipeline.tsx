@@ -1,8 +1,23 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { dealAPI } from '../services/api';
 import type { Deal } from '../types/api';
 import { DealStage } from '../types/api';
+import { DealKanbanCard } from '../components/DealKanbanCard';
 
 // Pipeline stages matching mockup screen 1
 const PIPELINE_STAGES = [
@@ -15,6 +30,9 @@ const PIPELINE_STAGES = [
 ] as const;
 
 export const Pipeline: React.FC = () => {
+  const queryClient = useQueryClient();
+  const [activeDeal, setActiveDeal] = React.useState<Deal | null>(null);
+
   // Fetch all deals
   const { data: dealsData, isLoading, isError } = useQuery({
     queryKey: ['deals', 'pipeline'],
@@ -22,6 +40,72 @@ export const Pipeline: React.FC = () => {
     refetchInterval: 30000, // Refresh every 30 seconds
     retry: 1,
   });
+
+  // Update deal stage mutation
+  const updateDealStageMutation = useMutation({
+    mutationFn: ({ dealId, newStage }: { dealId: string; newStage: DealStage }) =>
+      dealAPI.updateDealStage(dealId, newStage),
+    onMutate: async ({ dealId, newStage }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['deals', 'pipeline'] });
+
+      // Snapshot previous value
+      const previousDeals = queryClient.getQueryData(['deals', 'pipeline']);
+
+      // Optimistically update
+      queryClient.setQueryData(['deals', 'pipeline'], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          deals: old.deals.map((deal: Deal) =>
+            deal.id === dealId ? { ...deal, stage: newStage } : deal
+          ),
+        };
+      });
+
+      return { previousDeals };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousDeals) {
+        queryClient.setQueryData(['deals', 'pipeline'], context.previousDeals);
+      }
+      console.error('Failed to update deal stage:', err);
+    },
+    onSuccess: () => {
+      // Refetch to ensure sync
+      queryClient.invalidateQueries({ queryKey: ['deals', 'pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+    },
+  });
+
+  // Drag & drop sensors
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 100, tolerance: 5 },
+    })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const deal = allDeals.find((d) => d.id === event.active.id);
+    setActiveDeal(deal || null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDeal(null);
+
+    if (!over || active.id === over.id) return;
+
+    const dealId = active.id as string;
+    const newStage = over.id as DealStage;
+
+    // Update deal stage
+    updateDealStageMutation.mutate({ dealId, newStage });
+  };
 
   if (isError) {
     return (
@@ -49,7 +133,7 @@ export const Pipeline: React.FC = () => {
 
   // Group deals by stage
   const dealsByStage = PIPELINE_STAGES.reduce((acc, stage) => {
-    acc[stage.id] = allDeals.filter(deal => deal.stage === stage.id);
+    acc[stage.id] = allDeals.filter((deal) => deal.stage === stage.id);
     return acc;
   }, {} as Record<string, Deal[]>);
 
@@ -69,130 +153,120 @@ export const Pipeline: React.FC = () => {
     return `₹${value.toLocaleString('en-IN')}`;
   };
 
+  const totalPipelineValue = PIPELINE_STAGES.reduce(
+    (sum, stage) => sum + getStageValue(stage.id),
+    0
+  );
+
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline</h1>
-        <p className="text-gray-600">
-          {allDeals.length} {allDeals.length === 1 ? 'deal' : 'deals'} • Total value: {formatIndianCurrency(getStageValue(PIPELINE_STAGES[0].id) + getStageValue(PIPELINE_STAGES[1].id) + getStageValue(PIPELINE_STAGES[2].id) + getStageValue(PIPELINE_STAGES[3].id) + getStageValue(PIPELINE_STAGES[4].id) + getStageValue(PIPELINE_STAGES[5].id))}
-        </p>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="max-w-[1600px] mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline</h1>
+          <p className="text-gray-600">
+            {allDeals.length} {allDeals.length === 1 ? 'deal' : 'deals'} • Total value:{' '}
+            {formatIndianCurrency(totalPipelineValue)}
+          </p>
+        </div>
+
+        {/* Kanban Board - 6 columns */}
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {PIPELINE_STAGES.map((stage) => {
+            const stageDeals = dealsByStage[stage.id] || [];
+            const stageValue = getStageValue(stage.id);
+
+            return (
+              <StageColumn
+                key={stage.id}
+                stage={stage}
+                deals={stageDeals}
+                stageValue={stageValue}
+                formatCurrency={formatIndianCurrency}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* Kanban Board - 6 columns */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {PIPELINE_STAGES.map((stage) => {
-          const stageDeals = dealsByStage[stage.id] || [];
-          const stageValue = getStageValue(stage.id);
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {activeDeal ? <DealKanbanCard deal={activeDeal} /> : null}
+      </DragOverlay>
+    </DndContext>
+  );
+};
 
-          return (
-            <div
-              key={stage.id}
-              className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border border-gray-200"
-            >
-              {/* Column Header */}
-              <div className={`${stage.color} p-4 rounded-t-lg border-b border-gray-200`}>
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="font-semibold text-gray-900">{stage.label}</h2>
-                  <span className="text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full">
-                    {stageDeals.length}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600">
-                  {formatIndianCurrency(stageValue)}
-                </p>
-              </div>
+// Stage Column Component with Droppable Area
+interface StageColumnProps {
+  stage: { id: DealStage; label: string; color: string };
+  deals: Deal[];
+  stageValue: number;
+  formatCurrency: (value: number) => string;
+}
 
-              {/* Deals List */}
-              <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-280px)] overflow-y-auto">
-                {stageDeals.length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">
-                    <p className="text-sm">No deals</p>
-                  </div>
-                ) : (
-                  stageDeals.map((deal) => (
-                    <DealCard key={deal.id} deal={deal} />
-                  ))
-                )}
-              </div>
+const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, formatCurrency }) => {
+  const { setNodeRef } = useSortable({
+    id: stage.id,
+    data: { type: 'stage' },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex-shrink-0 w-80 bg-gray-50 rounded-lg border border-gray-200"
+    >
+      {/* Column Header */}
+      <div className={`${stage.color} p-4 rounded-t-lg border-b border-gray-200`}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="font-semibold text-gray-900">{stage.label}</h2>
+          <span className="text-sm font-medium text-gray-600 bg-white px-2 py-1 rounded-full">
+            {deals.length}
+          </span>
+        </div>
+        <p className="text-xs text-gray-600">{formatCurrency(stageValue)}</p>
+      </div>
+
+      {/* Deals List */}
+      <SortableContext items={deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+        <div className="p-3 space-y-3 min-h-[200px] max-h-[calc(100vh-280px)] overflow-y-auto">
+          {deals.length === 0 ? (
+            <div className="text-center py-8 text-gray-400">
+              <p className="text-sm">No deals</p>
             </div>
-          );
-        })}
-      </div>
+          ) : (
+            deals.map((deal) => <DraggableDealCard key={deal.id} deal={deal} />)
+          )}
+        </div>
+      </SortableContext>
     </div>
   );
 };
 
-// Deal card component (will be extracted to separate file later)
-interface DealCardProps {
+// Draggable Deal Card Wrapper
+interface DraggableDealCardProps {
   deal: Deal;
 }
 
-const DealCard: React.FC<DealCardProps> = ({ deal }) => {
-  const getConfidenceColor = (confidence: number): string => {
-    if (confidence >= 0.9) return 'bg-green-100 text-green-800 border-green-300';
-    if (confidence >= 0.75) return 'bg-orange-100 text-orange-800 border-orange-300';
-    return 'bg-purple-100 text-purple-800 border-purple-300';
-  };
-
-  const formatIndianCurrency = (value: number): string => {
-    if (value >= 10000000) {
-      return `₹${(value / 10000000).toFixed(2)} Cr`;
-    } else if (value >= 100000) {
-      return `₹${(value / 100000).toFixed(2)} L`;
-    } else if (value >= 1000) {
-      return `₹${(value / 1000).toFixed(0)}K`;
-    }
-    return `₹${value.toLocaleString('en-IN')}`;
-  };
-
-  const getDaysUntilClose = (closeDate?: string): string => {
-    if (!closeDate) return '';
-    const diffDays = Math.ceil((new Date(closeDate).getTime() - Date.now()) / 86400000);
-    if (diffDays < 0) return 'Overdue';
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    return `${diffDays}d`;
-  };
-
-  const lastActivity = new Date(deal.updated_at).toLocaleDateString('en-IN', {
-    month: 'short',
-    day: 'numeric',
+const DraggableDealCard: React.FC<DraggableDealCardProps> = ({ deal }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: deal.id,
   });
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 hover:shadow-md transition-shadow cursor-pointer">
-      {/* Company Name */}
-      <h3 className="font-medium text-gray-900 mb-2 line-clamp-1">
-        {deal.title}
-      </h3>
-
-      {/* Value & Confidence */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-lg font-semibold text-blue-600">
-          {formatIndianCurrency(deal.value || 0)}
-        </span>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getConfidenceColor(deal.confidence)}`}>
-          {Math.round(deal.confidence * 100)}%
-        </span>
-      </div>
-
-      {/* Description */}
-      {deal.description && (
-        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
-          {deal.description}
-        </p>
-      )}
-
-      {/* Last Activity & Close Date */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span>📅 {lastActivity}</span>
-        {deal.expected_close_date && (
-          <span className={getDaysUntilClose(deal.expected_close_date) === 'Overdue' ? 'text-red-600 font-medium' : ''}>
-            🎯 {getDaysUntilClose(deal.expected_close_date)}
-          </span>
-        )}
-      </div>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <DealKanbanCard deal={deal} />
     </div>
   );
 };
