@@ -185,6 +185,23 @@ export class AppController {
     }
   }
 
+  @Get('insights')
+  async getInsights() {
+    try {
+      const insights = await this.dynamoDbService.getInsights();
+      return {
+        insights,
+        count: insights.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch insights: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('stats/summary')
   async getStatsSummary() {
     try {

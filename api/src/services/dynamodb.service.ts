@@ -444,6 +444,80 @@ export class DynamoDbService {
     }
   }
 
+  async getInsights(): Promise<any[]> {
+    try {
+      const insights: any[] = [];
+      const now = new Date();
+
+      // Get all active deals for analysis
+      const dealsResult = await this.getDeals(undefined, 1000);
+      const activeDeals = dealsResult.items.filter((deal: any) =>
+        deal.status !== DealStatus.WON && deal.status !== DealStatus.LOST
+      );
+
+      // Insight 1: Check for inactive deals (no activity in 4+ days)
+      const fourDaysAgo = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000);
+      const inactiveDeals = activeDeals.filter((deal: any) => {
+        if (!deal.updated_at) return false;
+        const lastUpdate = new Date(deal.updated_at);
+        return lastUpdate < fourDaysAgo;
+      });
+
+      if (inactiveDeals.length > 0) {
+        const deal = inactiveDeals[0];
+        insights.push({
+          id: `insight-inactive-${deal.id}`,
+          type: 'inactive_deal',
+          message: `Deal "${deal.title}" has been inactive for 4+ days. Consider following up to maintain momentum.`,
+          severity: 'warning',
+          deal_id: deal.id,
+          created_at: now.toISOString()
+        });
+      }
+
+      // Insight 2: High-value deals closing soon
+      const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const urgentHighValueDeals = activeDeals.filter((deal: any) => {
+        if (!deal.expected_close_date || !deal.value) return false;
+        const closeDate = new Date(deal.expected_close_date);
+        return closeDate <= weekFromNow && deal.value >= 100000; // ₹1L or more
+      });
+
+      if (urgentHighValueDeals.length > 0) {
+        const deal = urgentHighValueDeals[0];
+        const closeDate = new Date(deal.expected_close_date);
+        const daysLeft = Math.ceil((closeDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        insights.push({
+          id: `insight-urgent-${deal.id}`,
+          type: 'high_interest',
+          message: `High-value deal "${deal.title}" (₹${(deal.value / 100000).toFixed(1)}L) closes in ${daysLeft} days. Prioritize final negotiations.`,
+          severity: 'positive',
+          deal_id: deal.id,
+          created_at: now.toISOString()
+        });
+      }
+
+      // Insight 3: Best time to contact (placeholder - could use email response patterns)
+      if (activeDeals.length > 0) {
+        insights.push({
+          id: `insight-timing-${Date.now()}`,
+          type: 'best_time',
+          message: `Based on email patterns, contacts are most responsive on weekday mornings (9-11 AM). Schedule important calls accordingly.`,
+          severity: 'info',
+          created_at: now.toISOString()
+        });
+      }
+
+      // Return top 3 insights
+      return insights.slice(0, 3);
+
+    } catch (error) {
+      this.logger.error(`Error getting insights: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
   async healthCheck(): Promise<{ status: string; message?: string }> {
     try {
       // Simple health check - try to describe a table

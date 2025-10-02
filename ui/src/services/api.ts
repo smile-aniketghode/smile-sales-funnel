@@ -124,6 +124,12 @@ export const statsAPI = {
     const response = await apiClient.get('/stats/summary');
     return response.data;
   },
+
+  // Get AI-powered insights
+  getInsights: async (): Promise<{ insights: any[]; count: number; status: string }> => {
+    const response = await apiClient.get('/insights');
+    return response.data;
+  },
 };
 
 export const healthAPI = {

@@ -4,6 +4,7 @@ import { statsAPI } from '../services/api';
 import { MetricCard } from '../components/MetricCard';
 import { HotDeals } from '../components/HotDeals';
 import { TodaysTasks } from '../components/TodaysTasks';
+import { AIInsights } from '../components/AIInsights';
 
 export const Dashboard: React.FC = () => {
   // Fetch enhanced statistics
@@ -100,16 +101,8 @@ export const Dashboard: React.FC = () => {
         <TodaysTasks />
       </div>
 
-      {/* AI Insights Panel - Coming in Day 4 */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          🤖 AI-Powered Insights
-          <span className="ml-2 text-sm font-normal text-gray-500">(Coming Soon)</span>
-        </h2>
-        <div className="text-center py-8 text-gray-400">
-          <p>Smart recommendations based on your sales data</p>
-        </div>
-      </div>
+      {/* AI Insights Panel */}
+      <AIInsights />
 
       {/* Footer Info */}
       <div className="mt-8 text-center text-sm text-gray-500">
