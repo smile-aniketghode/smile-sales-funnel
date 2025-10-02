@@ -1,5 +1,6 @@
 import React from 'react';
-import { Task, TaskPriority } from '../types/api';
+import type { Task } from '../types/api';
+import { TaskPriority } from '../types/api';
 
 interface TaskCardProps {
   task: Task;

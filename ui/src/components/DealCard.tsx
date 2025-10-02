@@ -1,5 +1,6 @@
 import React from 'react';
-import { Deal, DealStage } from '../types/api';
+import type { Deal } from '../types/api';
+import { DealStage } from '../types/api';
 
 interface DealCardProps {
   deal: Deal;
