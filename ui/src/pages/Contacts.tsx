@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { contactAPI } from '../services/api';
-import type { Contact } from '../types/api';
 
 export const Contacts: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,18 +1,18 @@
 // API response types
-export enum TaskStatus {
+export const enum TaskStatus {
   DRAFT = 'draft',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
   COMPLETED = 'completed'
 }
 
-export enum TaskPriority {
+export const enum TaskPriority {
   HIGH = 'high',
   MEDIUM = 'medium',
   LOW = 'low'
 }
 
-export enum DealStatus {
+export const enum DealStatus {
   DRAFT = 'draft',
   ACCEPTED = 'accepted',
   REJECTED = 'rejected',
@@ -20,12 +20,14 @@ export enum DealStatus {
   LOST = 'lost'
 }
 
-export enum DealStage {
+export const enum DealStage {
   LEAD = 'lead',
   CONTACTED = 'contacted',
   DEMO = 'demo',
   PROPOSAL = 'proposal',
   NEGOTIATION = 'negotiation',
+  QUALIFIED = 'qualified',
+  CLOSED = 'closed',
   CLOSED_WON = 'closed_won'
 }
 
@@ -85,6 +87,13 @@ export interface StatsResponse {
     draft_deals: number;
     total_tasks: number;
     total_deals: number;
+    revenue?: number;
+    revenue_trend?: string;
+    active_deals?: number;
+    closing_this_week?: number;
+    conversion_rate?: number;
+    conversion_trend?: string;
+    new_contacts?: number;
   };
   generated_at: string;
   status: string;

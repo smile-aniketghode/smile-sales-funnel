@@ -64,7 +64,7 @@ export const Pipeline: React.FC = () => {
 
       return { previousDeals };
     },
-    onError: (err, variables, context) => {
+    onError: (err, _variables, context) => {
       // Rollback on error
       if (context?.previousDeals) {
         queryClient.setQueryData(['deals', 'pipeline'], context.previousDeals);

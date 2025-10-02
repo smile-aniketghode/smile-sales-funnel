@@ -25,18 +25,16 @@ class EmailProcessingWorkflow:
     """LangGraph workflow for email processing pipeline"""
     
     def __init__(
-        self, 
+        self,
         confidence_threshold: float = 0.8,
-        llm_model: str = "llama3.2",
-        llm_base_url: str = "http://localhost:11434"
+        llm_model: str = "mistralai/mistral-small-3.2-24b-instruct:free"
     ):
         """
         Initialize the workflow
-        
+
         Args:
             confidence_threshold: Confidence threshold for auto-approval
-            llm_model: Ollama model to use for extraction
-            llm_base_url: Base URL for Ollama API
+            llm_model: OpenRouter model to use for extraction
         """
         self.confidence_threshold = confidence_threshold
         

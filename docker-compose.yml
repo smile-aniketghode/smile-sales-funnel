@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # Worker Service - Python FastAPI
+  worker:
+    image: smile-worker
+    container_name: smile-worker
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_MODEL=mistralai/mistral-small-3.2-24b-instruct:free
+      - CONFIDENCE_THRESHOLD=0.8
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - AWS_REGION=local
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
+      - GMAIL_REDIRECT_URI=${GMAIL_REDIRECT_URI:-http://localhost:8000/oauth/callback}
+    depends_on:
+      - dynamodb-local
+    networks:
+      - smile-network
+
+  # API Service - NestJS
+  api:
+    image: smile-api
+    container_name: smile-api
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - WORKER_URL=http://worker:8000
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - AWS_REGION=local
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+    depends_on:
+      - worker
+      - dynamodb-local
+    networks:
+      - smile-network
+
+  # UI Service - React + Vite
+  ui:
+    image: smile-ui
+    container_name: smile-ui
+    ports:
+      - "5173:5173"
+    environment:
+      - PORT=5173
+      - VITE_API_URL=http://localhost:3001
+      - VITE_WORKER_URL=http://localhost:8000
+    depends_on:
+      - api
+    networks:
+      - smile-network
+
+  # DynamoDB Local
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: smile-dynamodb-local
+    ports:
+      - "8001:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -inMemory"
+    networks:
+      - smile-network
+
+networks:
+  smile-network:
+    driver: bridge

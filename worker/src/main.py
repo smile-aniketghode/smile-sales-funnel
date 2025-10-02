@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="SMILe Sales Funnel Worker",
-    description="Background processing service for email ingestion with LangGraph + Ollama",
+    description="Background processing service for email ingestion with LangGraph + OpenRouter",
     version="0.2.0"
 )
 
@@ -33,13 +33,11 @@ app.add_middleware(
 
 # Initialize workflow with environment variables
 confidence_threshold = float(os.getenv("CONFIDENCE_THRESHOLD", "0.8"))
-llm_model = os.getenv("LLM_MODEL", "llama3.2")
-ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+llm_model = os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.2-24b-instruct:free")
 
 workflow = EmailProcessingWorkflow(
     confidence_threshold=confidence_threshold,
-    llm_model=llm_model,
-    llm_base_url=ollama_base_url
+    llm_model=llm_model
 )
 
 # Initialize Gmail OAuth services
@@ -71,10 +69,10 @@ async def health_check():
         "service": "SMILe Sales Funnel Worker",
         "version": "0.3.0",
         "llm_model": llm_model,
-        "ollama_url": ollama_base_url,
+        "llm_provider": "openrouter",
         "confidence_threshold": confidence_threshold,
         "gmail_oauth_configured": bool(os.getenv("GMAIL_CLIENT_ID")),
-        "message": "LangGraph + Ollama + Gmail OAuth integration"
+        "message": "LangGraph + OpenRouter + Gmail OAuth integration"
     }
 
 # ============================================================================
@@ -297,8 +295,8 @@ async def stop_polling():
 @app.post("/ingestEmail")
 async def ingest_email_endpoint(file: UploadFile = File(...)) -> Dict[str, Any]:
     """
-    Process email through complete LangGraph pipeline with Ollama LLM
-    
+    Process email through complete LangGraph pipeline with OpenRouter LLM
+
     Returns:
         Processing results with extracted tasks and deals
     """
@@ -344,11 +342,10 @@ async def get_processing_stats():
         },
         "llm_info": {
             "model": llm_model,
-            "provider": "ollama",
-            "endpoint": ollama_base_url
+            "provider": "openrouter"
         },
         "generated_at": "2025-09-01T02:52:00Z",
-        "note": "Real LangGraph + Ollama integration"
+        "note": "Real LangGraph + OpenRouter integration"
     }
 
 if __name__ == "__main__":

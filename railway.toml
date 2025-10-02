@@ -1,0 +1,7 @@
+# Railway monorepo configuration
+# This configures the worker service
+# For API and UI, create separate services in Railway dashboard pointing to Dockerfile.api and Dockerfile.ui
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.worker"

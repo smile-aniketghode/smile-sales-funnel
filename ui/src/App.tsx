@@ -228,7 +228,7 @@ async function processFile(file: File) {
               📋 Extracted Tasks (${tasks.length})
             </h4>
             <div class="space-y-3">
-              ${tasks.map(task => `
+              ${tasks.map((task: any) => `
                 <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
@@ -261,7 +261,7 @@ async function processFile(file: File) {
               💰 Potential Deals (${deals.length})
             </h4>
             <div class="space-y-3">
-              ${deals.map(deal => `
+              ${deals.map((deal: any) => `
                 <div class="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
                   <div class="flex justify-between items-start">
                     <div class="flex-1">
@@ -320,7 +320,7 @@ async function processFile(file: File) {
               <div><strong>High Confidence Items:</strong> ${(result.results?.high_confidence_tasks || 0) + (result.results?.high_confidence_deals || 0)}</div>
               <div><strong>Total Extracted:</strong> ${tasks.length + deals.length}</div>
               <div><strong>Processing Time:</strong> ${result.processing_time_ms}ms</div>
-              <div><strong>Auto-approved:</strong> ${tasks.filter(t => t.status === 'accepted').length + deals.filter(d => d.status === 'accepted').length}</div>
+              <div><strong>Auto-approved:</strong> ${tasks.filter((t: any) => t.status === 'accepted').length + deals.filter((d: any) => d.status === 'accepted').length}</div>
             </div>
             <p class="text-xs text-gray-500 mt-3">
               💡 Items with ≥80% confidence are automatically approved. Lower confidence items require manual review.

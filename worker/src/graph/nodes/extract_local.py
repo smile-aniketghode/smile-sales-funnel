@@ -42,48 +42,29 @@ class ExtractionResult(BaseModel):
 
 
 class ExtractLocalNode:
-    """LangGraph node for LLM extraction using Ollama or OpenRouter"""
+    """LangGraph node for LLM extraction using OpenRouter"""
 
     def __init__(
         self,
-        provider: str = None,
         model_name: str = None,
-        base_url: str = None,
         api_key: str = None
     ):
         """
-        Initialize extraction node with LLM provider
+        Initialize extraction node with OpenRouter LLM
 
         Args:
-            provider: "ollama" or "openrouter" (defaults to LLM_PROVIDER env var)
-            model_name: Model name (defaults to LLM_MODEL or OPENROUTER_MODEL env var)
-            base_url: Ollama base URL (for ollama provider)
-            api_key: OpenRouter API key (for openrouter provider)
+            model_name: Model name (defaults to OPENROUTER_MODEL env var)
+            api_key: OpenRouter API key (defaults to OPENROUTER_API_KEY env var)
         """
-        # Determine provider from env or parameter
-        self.provider = provider or os.getenv("LLM_PROVIDER", "ollama")
-
-        # Initialize LLM based on provider
-        if self.provider == "openrouter":
-            # OpenRouter setup
-            model = model_name or os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.2-24b-instruct:free")
-            self.llm = OpenRouterLLM(
-                model=model,
-                api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
-                temperature=0.1,
-            )
-            logger.info(f"Using OpenRouter with model: {model}")
-
-        else:
-            # Ollama setup (default)
-            model = model_name or os.getenv("LLM_MODEL", "qwen2.5-coder:7b")
-            base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-            self.llm = ChatOllama(
-                model=model,
-                base_url=base_url,
-                temperature=0.1,
-            )
-            logger.info(f"Using Ollama with model: {model} at {base_url}")
+        # Use OpenRouter only (removed Ollama support)
+        self.provider = "openrouter"
+        model = model_name or os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.2-24b-instruct:free")
+        self.llm = OpenRouterLLM(
+            model=model,
+            api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
+            temperature=0.1,
+        )
+        logger.info(f"Using OpenRouter with model: {model}")
 
         self.parser = JsonOutputParser(pydantic_object=ExtractionResult)
 
