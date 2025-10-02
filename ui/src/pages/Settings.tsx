@@ -122,6 +122,10 @@ export const Settings: React.FC = () => {
       localStorage.removeItem('user_id');
       localStorage.removeItem('user_email');
       setUserId(null);
+
+      // Force redirect to login page
+      console.log('🚪 User disconnected, redirecting to login');
+      window.location.href = '/';
     },
   });
 
