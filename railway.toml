@@ -1,7 +1,20 @@
-# Railway monorepo configuration
-# This configures the worker service
-# For API and UI, create separate services in Railway dashboard pointing to Dockerfile.api and Dockerfile.ui
+# Railway monorepo configuration for SMILe Sales Funnel
+# Defines 3 services: worker, api, ui
 
 [build]
 builder = "DOCKERFILE"
+
+# Worker service (Python FastAPI)
+[service.worker]
 dockerfilePath = "Dockerfile.worker"
+autoDeploy = true
+
+# API service (NestJS)
+[service.api]
+dockerfilePath = "Dockerfile.api"
+autoDeploy = true
+
+# UI service (React+Vite)
+[service.ui]
+dockerfilePath = "Dockerfile.ui"
+autoDeploy = true
