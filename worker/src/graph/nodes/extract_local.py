@@ -5,9 +5,11 @@ from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 import json
 import logging
+import os
 
 from ...models import ProcessingStatus
 from ..state import EmailProcessingState
+from ...services.openrouter_llm import OpenRouterLLM
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +29,8 @@ class DealExtraction(BaseModel):
     title: str = Field(description="Deal title or opportunity name")
     description: str = Field(description="Detailed deal description")
     value: float = Field(default=0.0, description="Estimated deal value")
-    currency: str = Field(default="USD", description="Currency code")
-    stage: str = Field(description="Deal stage: lead, qualified, proposal, negotiation, closed")
+    currency: str = Field(default="INR", description="Currency code")
+    stage: str = Field(description="Deal stage: lead, contacted, demo, proposal, negotiation, closed_won")
     probability: int = Field(description="Win probability between 0 and 100")
     confidence: float = Field(description="Confidence score between 0.0 and 1.0")
     snippet: str = Field(description="Email snippet that led to this extraction")
@@ -41,41 +43,74 @@ class ExtractionResult(BaseModel):
 
 
 class ExtractLocalNode:
-    """LangGraph node for local LLM extraction using Ollama"""
-    
-    def __init__(self, model_name: str = "llama3.2", base_url: str = "http://localhost:11434"):
-        # Use local Ollama for LLM processing
-        self.llm = ChatOllama(
-            model=model_name,
-            base_url=base_url,  # Default Ollama API endpoint
-            temperature=0.1,  # Low temperature for consistent extraction
-        )
-        
+    """LangGraph node for LLM extraction using Ollama or OpenRouter"""
+
+    def __init__(
+        self,
+        provider: str = None,
+        model_name: str = None,
+        base_url: str = None,
+        api_key: str = None
+    ):
+        """
+        Initialize extraction node with LLM provider
+
+        Args:
+            provider: "ollama" or "openrouter" (defaults to LLM_PROVIDER env var)
+            model_name: Model name (defaults to LLM_MODEL or OPENROUTER_MODEL env var)
+            base_url: Ollama base URL (for ollama provider)
+            api_key: OpenRouter API key (for openrouter provider)
+        """
+        # Determine provider from env or parameter
+        self.provider = provider or os.getenv("LLM_PROVIDER", "ollama")
+
+        # Initialize LLM based on provider
+        if self.provider == "openrouter":
+            # OpenRouter setup
+            model = model_name or os.getenv("OPENROUTER_MODEL", "mistralai/mistral-small-3.2-24b-instruct:free")
+            self.llm = OpenRouterLLM(
+                model=model,
+                api_key=api_key or os.getenv("OPENROUTER_API_KEY"),
+                temperature=0.1,
+            )
+            logger.info(f"Using OpenRouter with model: {model}")
+
+        else:
+            # Ollama setup (default)
+            model = model_name or os.getenv("LLM_MODEL", "qwen2.5-coder:7b")
+            base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            self.llm = ChatOllama(
+                model=model,
+                base_url=base_url,
+                temperature=0.1,
+            )
+            logger.info(f"Using Ollama with model: {model} at {base_url}")
+
         self.parser = JsonOutputParser(pydantic_object=ExtractionResult)
-        
+
         # Create extraction prompt
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", self._get_system_prompt()),
             ("human", "Analyze this email:\n\nSUBJECT: {subject}\nFROM: {sender}\n\nCONTENT:\n{content}")
         ])
-        
+
         # Create extraction chain
         self.chain = self.prompt | self.llm | self.parser
-    
+
     async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
         Execute LLM extraction
-        
+
         Args:
             state: Current processing state
-            
+
         Returns:
             Updated state with extraction results
         """
         # Skip if already failed or filtered
         if state.get("status") in [ProcessingStatus.FAILED, ProcessingStatus.SKIPPED]:
             return {}
-        
+
         try:
             # Prepare input for LLM
             llm_input = {
@@ -83,29 +118,29 @@ class ExtractLocalNode:
                 "sender": state["sender_email"],
                 "content": state["filtered_content"]
             }
-            
-            logger.info(f"Starting LLM extraction for email: {state['message_id']}")
-            
+
+            logger.info(f"Starting {self.provider} LLM extraction for email: {state['message_id']}")
+
             # Call LLM
             result = await self.chain.ainvoke(llm_input)
-            
+
             # Extract token usage (if available)
             tokens_used = 0  # Would need to implement token counting
-            
+
             logger.info(f"LLM returned: {type(result)} - {result}")
-            
+
             # Handle both dict and Pydantic model results
             if isinstance(result, dict):
                 # LLM returned dict - extract tasks and deals
                 tasks_data = []
                 deals_data = []
-                
+
                 for task_raw in result.get("tasks", []):
                     # Convert simplified format to full task format
                     # Extract title and description from available fields
                     title = task_raw.get("title", task_raw.get("text", task_raw.get("snippet", "Unknown task")))
                     description = task_raw.get("description", task_raw.get("snippet", task_raw.get("text", title)))
-                    
+
                     task_data = {
                         "title": title,
                         "description": description if description else title,  # Ensure description is not empty
@@ -115,13 +150,13 @@ class ExtractLocalNode:
                         "snippet": task_raw.get("snippet", task_raw.get("text", title))
                     }
                     tasks_data.append(task_data)
-                
+
                 for deal_raw in result.get("deals", []):
                     # Convert simplified format to full deal format
                     # Extract title and description from available fields
                     title = deal_raw.get("title", deal_raw.get("text", deal_raw.get("snippet", "Unknown deal")))
                     description = deal_raw.get("description", deal_raw.get("snippet", deal_raw.get("text", title)))
-                    
+
                     deal_data = {
                         "title": title,
                         "description": description if description else title,  # Ensure description is not empty
@@ -133,12 +168,12 @@ class ExtractLocalNode:
                         "snippet": deal_raw.get("snippet", deal_raw.get("text", title))
                     }
                     deals_data.append(deal_data)
-                
+
                 # Create extraction data
                 extraction_data = {
                     "tasks": tasks_data,
                     "deals": deals_data,
-                    "agent": self.llm.model,
+                    "agent": getattr(self.llm, 'model', getattr(self.llm, 'model_name', self.provider)),
                     "tokens_used": tokens_used
                 }
             else:
@@ -146,20 +181,20 @@ class ExtractLocalNode:
                 extraction_data = {
                     "tasks": [task.dict() for task in result.tasks],
                     "deals": [deal.dict() for deal in result.deals],
-                    "agent": self.llm.model,
+                    "agent": getattr(self.llm, 'model', getattr(self.llm, 'model_name', self.provider)),
                     "tokens_used": tokens_used
                 }
-            
-            logger.info(f"LLM extraction complete. Tasks: {len(extraction_data['tasks'])}, Deals: {len(extraction_data['deals'])}")
-            
+
+            logger.info(f"{self.provider} extraction complete. Tasks: {len(extraction_data['tasks'])}, Deals: {len(extraction_data['deals'])}")
+
             return {
                 "extraction_result": extraction_data,
                 "tokens_used": tokens_used,
-                "agent_used": self.llm.model
+                "agent_used": getattr(self.llm, 'model', getattr(self.llm, 'model_name', self.provider))
             }
-            
+
         except Exception as e:
-            logger.error(f"LLM extraction failed: {str(e)}")
+            logger.error(f"{self.provider} LLM extraction failed: {str(e)}")
             return {
                 "status": ProcessingStatus.FAILED,
                 "error_message": f"LLM extraction error: {str(e)}",
@@ -167,7 +202,7 @@ class ExtractLocalNode:
                 "tokens_used": 0,
                 "agent_used": "failed"
             }
-    
+
     def _get_system_prompt(self) -> str:
         """Get the system prompt for extraction"""
         return """You are a business email analyzer. Extract actionable tasks and potential deals from email content.
@@ -183,6 +218,7 @@ DEAL EXTRACTION RULES:
 - Must indicate monetary value, contract potential, or purchase intent
 - Examples: "Interested in ₹50L contract", "Budget approved for ₹25 lakh project", "Ready to purchase for ₹2 crore"
 - Indian currency context: Use INR/Rupees, understand lakhs (L) and crores (Cr)
+- Deal stages: lead, contacted, demo, proposal, negotiation, closed_won
 - Set confidence based on buying signals strength (0.0-1.0)
 
 OUTPUT REQUIREMENTS:
@@ -194,7 +230,7 @@ OUTPUT REQUIREMENTS:
 
 CONFIDENCE SCORING:
 - 0.9-1.0: Explicitly stated with clear details
-- 0.7-0.8: Strongly implied with good context  
+- 0.7-0.8: Strongly implied with good context
 - 0.5-0.6: Moderately suggested
 - 0.3-0.4: Weakly implied
 - 0.0-0.2: Very uncertain

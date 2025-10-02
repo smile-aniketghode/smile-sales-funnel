@@ -42,10 +42,8 @@ class EmailProcessingWorkflow:
         
         # Initialize nodes
         self.prefilter_node = PreFilterNode()
-        self.extract_node = ExtractLocalNode(
-            model_name=llm_model,
-            base_url=llm_base_url
-        )
+        # ExtractLocalNode auto-detects provider, model from env vars
+        self.extract_node = ExtractLocalNode()
         self.confidence_gate_node = ConfidenceGateNode(confidence_threshold)
         self.persist_node = PersistNode()
         self.emit_event_node = EmitEventNode()
