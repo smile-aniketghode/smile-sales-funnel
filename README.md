@@ -21,7 +21,31 @@ This is a monorepo containing:
 
 See `Phasewise Plan.md` for detailed development roadmap.
 
-## Getting Started
+## Quick Start
+
+### Complete Local Demo (Recommended)
+```bash
+# 1. Start Ollama (separate terminal)
+ollama serve
+
+# 2. Start all services
+make demo
+
+# 3. Open browser at http://localhost:5173
+```
+
+**⚠️ Important:** For best performance, use `qwen2.5-coder:7b` model:
+```bash
+# Edit worker/.env.local
+LLM_MODEL=qwen2.5-coder:7b  # Fast (20-30s)
+# NOT llama3.2 (too slow - 90s+)
+```
+
+See [QUICKSTART.md](QUICKSTART.md) for full instructions.
+
+---
+
+## Development
 
 ### API Development
 ```bash
@@ -30,12 +54,36 @@ npm install
 npm run start:dev
 ```
 
-### Commands
-- Build: `npm run build` (in api/)
-- Test: `npm run test` (in api/)
-- Lint: `npm run lint` (in api/)
+### Worker Development
+```bash
+cd worker
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m src.main
+```
 
-## Phase 0 Status: Complete ✅
-- ✅ Monorepo structure created
-- ✅ NestJS API initialized with stub endpoints
-- ✅ Basic tooling configured
+### Commands
+- Start demo: `make demo`
+- Stop all: `make stop`
+- Run tests: `make test`
+- View logs: `make logs`
+
+## Current Status
+
+### Phase 1: Local Demo ✅ 90% Complete
+- ✅ Local-first architecture (DynamoDB Local)
+- ✅ Worker + LangGraph + Ollama LLM
+- ✅ React UI with email upload
+- ✅ Task/Deal extraction working
+- ✅ 5 sample business emails
+- ✅ Comprehensive documentation (7 guides)
+- ⚠️ Use qwen2.5-coder model for speed
+
+**Next:** Tag v0.2-phase1-e2e, start Phase 2 Dashboard
+
+### Phase 2: Dashboard + Gmail (Next - 2 weeks)
+- Week 1: Dashboard UI with metrics
+- Week 2: Gmail OAuth + auto-sync
+
+See **[Phasewise Plan v3.md](Phasewise Plan v3.md)** for detailed roadmap.
