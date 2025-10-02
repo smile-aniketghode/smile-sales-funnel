@@ -22,10 +22,11 @@ export enum DealStatus {
 
 export enum DealStage {
   LEAD = 'lead',
-  QUALIFIED = 'qualified',
+  CONTACTED = 'contacted',
+  DEMO = 'demo',
   PROPOSAL = 'proposal',
   NEGOTIATION = 'negotiation',
-  CLOSED = 'closed'
+  CLOSED_WON = 'closed_won'
 }
 
 export interface Task {
