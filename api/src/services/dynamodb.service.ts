@@ -248,6 +248,13 @@ export class DynamoDbService {
       draft_deals: number;
       total_tasks: number;
       total_deals: number;
+      revenue?: number;
+      revenue_trend?: string;
+      active_deals?: number;
+      closing_this_week?: number;
+      conversion_rate?: number;
+      conversion_trend?: string;
+      new_contacts?: number;
     };
     generated_at: string;
   }> {
@@ -255,17 +262,59 @@ export class DynamoDbService {
       // Get draft counts
       const [draftTasks, draftDeals, allTasks, allDeals] = await Promise.all([
         this.getTasks(TaskStatus.DRAFT, 100),
-        this.getDeals(DealStatus.DRAFT, 100), 
+        this.getDeals(DealStatus.DRAFT, 100),
         this.getTasks(undefined, 1000),
         this.getDeals(undefined, 1000)
       ]);
+
+      // Calculate revenue (sum of all deal values)
+      const revenue = allDeals.items.reduce((sum, deal: any) => {
+        return sum + (deal.value || 0);
+      }, 0);
+
+      // Count active deals (not won/lost)
+      const activeDeals = allDeals.items.filter((deal: any) =>
+        deal.status !== DealStatus.WON && deal.status !== DealStatus.LOST
+      ).length;
+
+      // Count deals closing this week
+      const now = new Date();
+      const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const closingThisWeek = allDeals.items.filter((deal: any) => {
+        if (!deal.expected_close_date) return false;
+        const closeDate = new Date(deal.expected_close_date);
+        return closeDate >= now && closeDate <= weekFromNow;
+      }).length;
+
+      // Calculate conversion rate (won deals / total deals * 100)
+      const wonDeals = allDeals.items.filter((deal: any) =>
+        deal.status === DealStatus.WON
+      ).length;
+      const conversionRate = allDeals.count > 0
+        ? Math.round((wonDeals / allDeals.count) * 100)
+        : 0;
+
+      // Count new contacts (last 30 days) - placeholder for now
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const newContacts = allDeals.items.filter((deal: any) => {
+        if (!deal.created_at) return false;
+        const createdDate = new Date(deal.created_at);
+        return createdDate >= thirtyDaysAgo;
+      }).length;
 
       return {
         summary: {
           draft_tasks: draftTasks.count,
           draft_deals: draftDeals.count,
           total_tasks: allTasks.count,
-          total_deals: allDeals.count
+          total_deals: allDeals.count,
+          revenue,
+          revenue_trend: '+22%', // Placeholder - would need historical data
+          active_deals: activeDeals,
+          closing_this_week: closingThisWeek,
+          conversion_rate: conversionRate,
+          conversion_trend: '+5%', // Placeholder - would need historical data
+          new_contacts: newContacts
         },
         generated_at: new Date().toISOString()
       };
@@ -277,7 +326,14 @@ export class DynamoDbService {
           draft_tasks: 0,
           draft_deals: 0,
           total_tasks: 0,
-          total_deals: 0
+          total_deals: 0,
+          revenue: 0,
+          revenue_trend: '+0%',
+          active_deals: 0,
+          closing_this_week: 0,
+          conversion_rate: 0,
+          conversion_trend: '+0%',
+          new_contacts: 0
         },
         generated_at: new Date().toISOString()
       };

@@ -1,18 +1,88 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Dashboard } from './pages/Dashboard';
+import { AIInbox } from './pages/AIInbox';
 import './App.css';
 
-function App() {
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+function Navigation() {
+  const location = useLocation();
+
+  const isActive = (path: string) => {
+    return location.pathname === path;
+  };
+
+  return (
+    <nav className="bg-white shadow-sm border-b border-gray-200">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center space-x-8">
+            <h1 className="text-xl font-bold text-gray-900">
+              🎯 SMILe Sales Funnel
+            </h1>
+            <div className="flex space-x-1">
+              <Link
+                to="/"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/')
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/inbox"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/inbox')
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                AI Inbox
+              </Link>
+              <Link
+                to="/upload"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/upload')
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                Upload Email
+              </Link>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            Phase 2 - Local Demo
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function UploadPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-8">
-          <h1 className="text-2xl font-bold">🎯 SMILe Sales Funnel - AI Inbox</h1>
+          <h2 className="text-2xl font-bold">Upload Email for AI Processing</h2>
           <p>Manual email processing for stakeholder testing</p>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Upload Email for AI Processing</h2>
-          <div 
+          <h3 className="text-xl font-semibold mb-4">Upload Email File</h3>
+          <div
             className="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-lg p-8 text-center transition-colors duration-200 drag-drop-zone"
             onDragEnter={handleDragEnter}
             onDragLeave={handleDragLeave}
@@ -71,10 +141,10 @@ function handleDragOver(e: React.DragEvent) {
 function handleDrop(e: React.DragEvent) {
   e.preventDefault();
   e.stopPropagation();
-  
+
   const zone = e.currentTarget as HTMLElement;
   zone.classList.remove('border-blue-500', 'bg-blue-50');
-  
+
   const files = e.dataTransfer.files;
   if (files && files[0]) {
     processFile(files[0]);
@@ -107,14 +177,14 @@ async function processFile(file: File) {
     });
 
     const result = await response.json();
-    
+
     if (result.status === 'success') {
       const tasks = result.tasks || [];
       const deals = result.deals || [];
-      
+
       let tasksHTML = '';
       let dealsHTML = '';
-      
+
       if (tasks.length > 0) {
         tasksHTML = `
           <div class="mb-6">
@@ -147,7 +217,7 @@ async function processFile(file: File) {
           </div>
         `;
       }
-      
+
       if (deals.length > 0) {
         dealsHTML = `
           <div class="mb-6">
@@ -185,7 +255,7 @@ async function processFile(file: File) {
           </div>
         `;
       }
-      
+
       resultDiv.className = 'mt-6 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden';
       resultDiv.innerHTML = `
         <div class="bg-gradient-to-r from-blue-500 to-green-500 px-6 py-4">
@@ -195,7 +265,7 @@ async function processFile(file: File) {
           </h3>
           <div class="flex items-center space-x-6 mt-2 text-blue-100 text-sm">
             <span>🎯 Business Score: ${Math.round((result.results?.business_score || 0) * 100)}%</span>
-            <span>🔍 AI Agent: ${result.tasks[0]?.agent || 'llama3.2'}</span>
+            <span>🔍 AI Agent: ${result.tasks[0]?.agent || 'qwen2.5-coder'}</span>
             <span>⚡ ${result.results?.prefilter_result === 'passed' ? 'Prefilter: Passed' : 'Prefilter: Failed'}</span>
           </div>
         </div>
@@ -246,6 +316,23 @@ function formatIndianCurrency(value: number): string {
   } else {
     return value.toLocaleString('en-IN');
   }
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-50">
+          <Navigation />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/inbox" element={<AIInbox />} />
+            <Route path="/upload" element={<UploadPage />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
