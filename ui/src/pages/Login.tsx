@@ -22,8 +22,8 @@ export const Login: React.FC = () => {
       localStorage.setItem('user_email', callbackEmail);
       console.log('✅ User authenticated:', callbackEmail);
 
-      // Redirect to dashboard
-      navigate('/', { replace: true });
+      // Force a full page reload to update auth state in App.tsx
+      window.location.href = '/';
     } else if (errorParam) {
       setError(errorParam || 'Failed to connect Gmail');
       setIsConnecting(false);
