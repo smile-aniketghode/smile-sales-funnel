@@ -1,14 +1,14 @@
 # Railway monorepo configuration for SMILe Sales Funnel
 # Defines 3 services: worker, api, ui
 
-[services.worker]
-build.builder = "DOCKERFILE"
-build.dockerfilePath = "worker/Dockerfile"
+[service.worker]
+rootDir = "worker"
+dockerfilePath = "worker/Dockerfile"
 
-[services.api]
-build.builder = "DOCKERFILE"
-build.dockerfilePath = "api/Dockerfile"
+[service.api]
+rootDir = "api"
+dockerfilePath = "api/Dockerfile"
 
-[services.ui]
-build.builder = "DOCKERFILE"
-build.dockerfilePath = "ui/Dockerfile"
+[service.ui]
+rootDir = "ui"
+dockerfilePath = "ui/Dockerfile"
