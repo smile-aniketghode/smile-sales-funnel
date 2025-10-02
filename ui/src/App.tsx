@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './pages/Dashboard';
 import { Pipeline } from './pages/Pipeline';
+import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
 import './App.css';
 
@@ -50,6 +51,16 @@ function Navigation() {
                 }`}
               >
                 Pipeline
+              </Link>
+              <Link
+                to="/contacts"
+                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive('/contacts')
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+              >
+                Contacts
               </Link>
               <Link
                 to="/inbox"
@@ -338,6 +349,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/contacts" element={<Contacts />} />
             <Route path="/inbox" element={<AIInbox />} />
             <Route path="/upload" element={<UploadPage />} />
           </Routes>
