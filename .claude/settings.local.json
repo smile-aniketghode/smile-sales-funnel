@@ -34,7 +34,8 @@
       "Bash(npm run dev:*)",
       "Bash(python3:*)",
       "Bash(lsof:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }
