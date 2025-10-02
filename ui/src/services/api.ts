@@ -65,6 +65,17 @@ export const taskAPI = {
   rejectTask: async (id: string): Promise<{ message: string; status: string }> => {
     return taskAPI.updateTask(id, { status: TaskStatus.REJECTED });
   },
+
+  // Complete task (change status to completed)
+  completeTask: async (id: string): Promise<{ message: string; status: string }> => {
+    return taskAPI.updateTask(id, { status: TaskStatus.COMPLETED });
+  },
+
+  // Get today's tasks (due today or overdue)
+  getTodaysTasks: async (): Promise<{ tasks: any[]; count: number; status: string }> => {
+    const response = await apiClient.get('/tasks/today');
+    return response.data;
+  },
 };
 
 export const dealAPI = {

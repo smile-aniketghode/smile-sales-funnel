@@ -151,6 +151,23 @@ export class AppController {
     }
   }
 
+  @Get('tasks/today')
+  async getTodaysTasks() {
+    try {
+      const tasks = await this.dynamoDbService.getTodaysTasks();
+      return {
+        tasks,
+        count: tasks.length,
+        status: 'success'
+      };
+    } catch (error) {
+      throw new HttpException(
+        `Failed to fetch today's tasks: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('deals/hot')
   async getHotDeals() {
     try {

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { statsAPI } from '../services/api';
 import { MetricCard } from '../components/MetricCard';
 import { HotDeals } from '../components/HotDeals';
+import { TodaysTasks } from '../components/TodaysTasks';
 
 export const Dashboard: React.FC = () => {
   // Fetch enhanced statistics
@@ -95,16 +96,8 @@ export const Dashboard: React.FC = () => {
         {/* Hot Deals Widget */}
         <HotDeals />
 
-        {/* Today's Tasks Widget - Coming in Day 3 */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            ✅ Today's Tasks
-            <span className="ml-2 text-sm font-normal text-gray-500">(Coming Soon)</span>
-          </h2>
-          <div className="text-center py-8 text-gray-400">
-            <p>Tasks due today and overdue items</p>
-          </div>
-        </div>
+        {/* Today's Tasks Widget */}
+        <TodaysTasks />
       </div>
 
       {/* AI Insights Panel - Coming in Day 4 */}

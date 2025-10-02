@@ -340,6 +340,61 @@ export class DynamoDbService {
     }
   }
 
+  async getTodaysTasks(): Promise<any[]> {
+    try {
+      // Get all accepted tasks
+      const result = await this.getTasks(TaskStatus.ACCEPTED, 1000);
+
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+
+      // Filter for tasks due today or overdue
+      const relevantTasks = result.items.filter((task: any) => {
+        if (!task.due_date) return false;
+
+        const dueDate = new Date(task.due_date);
+        dueDate.setHours(0, 0, 0, 0);
+
+        // Include if due today or overdue
+        return dueDate <= now;
+      });
+
+      // Sort by:
+      // 1. Priority (high → medium → low)
+      // 2. Due date (oldest/most overdue first)
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      const sortedTasks = relevantTasks.sort((a: any, b: any) => {
+        // First sort by priority
+        const priorityA = priorityOrder[a.priority?.toLowerCase()] ?? 3;
+        const priorityB = priorityOrder[b.priority?.toLowerCase()] ?? 3;
+
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+
+        // If same priority, sort by due date (oldest first)
+        const dateA = new Date(a.due_date);
+        const dateB = new Date(b.due_date);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+      // Return top 10 tasks
+      return sortedTasks.slice(0, 10).map((task: any) => ({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        priority: task.priority || 'medium',
+        due_date: task.due_date,
+        status: task.status,
+        deal_id: task.deal_id
+      }));
+
+    } catch (error) {
+      this.logger.error(`Error getting today's tasks: ${error.message}`, error.stack);
+      return [];
+    }
+  }
+
   async getHotDeals(): Promise<any[]> {
     try {
       // Get all deals that are not won/lost
