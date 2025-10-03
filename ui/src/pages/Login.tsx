@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-const WORKER_API_BASE = 'http://localhost:8000';
+const WORKER_API_BASE = import.meta.env.VITE_WORKER_API_BASE_URL || 'http://localhost:8000';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();

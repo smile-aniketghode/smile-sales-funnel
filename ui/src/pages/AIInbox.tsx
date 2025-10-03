@@ -96,7 +96,8 @@ export const AIInbox: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/ingestEmail', {
+      const WORKER_API_BASE = import.meta.env.VITE_WORKER_API_BASE_URL || 'http://localhost:8000';
+      const response = await fetch(`${WORKER_API_BASE}/ingestEmail`, {
         method: 'POST',
         body: formData,
       });
