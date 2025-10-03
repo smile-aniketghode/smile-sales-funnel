@@ -538,64 +538,56 @@ export class DynamoDbService {
 
   async getContacts(userId: string, limit: number = 50): Promise<any[]> {
     try {
-      // For now, derive contacts from email senders in sample data
-      // In production, this would query the people table with user_id filter
-      const contacts = [
-        {
-          id: 'contact-1',
-          name: 'Rajesh Kumar',
-          email: 'rajesh.kumar@techcorp.in',
-          company: 'Tech Corp India',
-          position: 'CTO',
-          segment: 'Enterprise',
-          status: 'Active',
-          deal_value: 5000000,
-          last_contact: '2025-01-15',
-          created_at: '2025-01-15T14:30:00+05:30'
-        },
-        {
-          id: 'contact-2',
-          name: 'Priya Sharma',
-          email: 'priya.sharma@retailnext.com',
-          company: 'Retail Next',
-          position: 'Operations Manager',
-          segment: 'Mid-Market',
-          status: 'Active',
-          deal_value: 0,
-          last_contact: '2025-01-16',
-          created_at: '2025-01-16T10:15:00+05:30'
-        },
-        {
-          id: 'contact-3',
-          name: 'Sneha Reddy',
-          email: 'sneha.reddy@startupindia.co',
-          company: 'Startup India',
-          position: 'Founder',
-          segment: 'SMB',
-          status: 'Active',
-          deal_value: 250000,
-          last_contact: '2025-01-18',
-          created_at: '2025-01-18T11:20:00+05:30'
-        },
-        {
-          id: 'contact-4',
-          name: 'Vikram Singh',
-          email: 'vikram.singh@pharmalogix.com',
-          company: 'PharmaLogix',
-          position: 'VP Sales',
-          segment: 'Enterprise',
-          status: 'Active',
-          deal_value: 5000000,
-          last_contact: '2025-01-19',
-          created_at: '2025-01-19T09:30:00+05:30'
-        }
-      ];
+      // Query People table for this user
+      const result = await this.dynamodb.send(
+        new QueryCommand({
+          TableName: this.peopleTable,
+          IndexName: 'user_id-created_at-index',
+          KeyConditionExpression: 'user_id = :user_id',
+          ExpressionAttributeValues: {
+            ':user_id': { S: userId }
+          },
+          Limit: limit,
+          ScanIndexForward: false // Most recent first
+        })
+      );
 
-      return contacts.slice(0, limit);
+      if (!result.Items || result.Items.length === 0) {
+        return [];
+      }
+
+      // Transform DynamoDB items to contact format
+      const contacts = result.Items.map(item => ({
+        id: item.person_id?.S || '',
+        name: item.name?.S || 'Unknown',
+        email: item.email?.S || '',
+        company: item.company?.S || 'Unknown Company',
+        position: item.title?.S || item.role?.S || '',
+        segment: this.inferSegment(item.company?.S),
+        status: 'Active', // Could be derived from recent activity
+        deal_value: 0, // Would need to aggregate from deals
+        last_contact: item.last_contact_date?.S || item.created_at?.S || new Date().toISOString(),
+        created_at: item.created_at?.S || new Date().toISOString()
+      }));
+
+      return contacts;
     } catch (error) {
       this.logger.error(`Error getting contacts: ${error.message}`, error.stack);
       return [];
     }
+  }
+
+  private inferSegment(company?: string): string {
+    // Simple heuristic - could be enhanced
+    if (!company) return 'SMB';
+    const lowerCompany = company.toLowerCase();
+    if (lowerCompany.includes('startup') || lowerCompany.includes('ventures')) {
+      return 'SMB';
+    }
+    if (lowerCompany.includes('corp') || lowerCompany.includes('enterprises')) {
+      return 'Enterprise';
+    }
+    return 'Mid-Market';
   }
 
   async healthCheck(): Promise<{ status: string; message?: string }> {
