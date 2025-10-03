@@ -13,7 +13,11 @@ RUN npm ci
 # Copy source code
 COPY . ./
 
-# Build Vite app
+# Build Vite app with environment variables
+ARG VITE_API_BASE_URL
+ARG VITE_WORKER_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_WORKER_API_BASE_URL=$VITE_WORKER_API_BASE_URL
 RUN npm run build
 
 # Production stage - serve static files
