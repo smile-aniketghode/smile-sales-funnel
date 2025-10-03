@@ -98,7 +98,7 @@ function Navigation() {
               ⚙️ Settings
             </Link>
             <div className="text-sm text-gray-500">
-              Phase 3 - Gmail Integration
+              AI-Powered CRM
             </div>
           </div>
         </div>

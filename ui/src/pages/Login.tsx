@@ -174,7 +174,7 @@ export const Login: React.FC = () => {
 
         {/* Footer */}
         <p className="text-center text-xs text-gray-500 mt-6">
-          Phase 3 - Gmail Integration • Powered by AI
+          AI-Powered CRM
         </p>
       </div>
     </div>
