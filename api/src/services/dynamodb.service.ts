@@ -539,13 +539,13 @@ export class DynamoDbService {
   async getContacts(userId: string, limit: number = 50): Promise<any[]> {
     try {
       // Query People table for this user
-      const result = await this.dynamodb.send(
+      const result = await this.docClient.send(
         new QueryCommand({
-          TableName: this.peopleTable,
+          TableName: this.getTableName('people'),
           IndexName: 'user_id-created_at-index',
           KeyConditionExpression: 'user_id = :user_id',
           ExpressionAttributeValues: {
-            ':user_id': { S: userId }
+            ':user_id': userId
           },
           Limit: limit,
           ScanIndexForward: false // Most recent first

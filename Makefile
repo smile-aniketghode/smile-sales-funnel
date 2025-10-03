@@ -33,12 +33,12 @@ demo: start
 	@open http://localhost:5173 2>/dev/null || xdg-open http://localhost:5173 2>/dev/null || echo "   Please open http://localhost:5173 in your browser"
 
 start:
-	@chmod +x start-local.sh
-	@./start-local.sh
+	@chmod +x scripts/local/start-local.sh
+	@./scripts/local/start-local.sh
 
 stop:
-	@chmod +x stop-local.sh
-	@./stop-local.sh
+	@chmod +x scripts/local/stop-local.sh
+	@./scripts/local/stop-local.sh
 
 clean:
 	@echo "🧹 Cleaning up..."
@@ -56,5 +56,5 @@ logs:
 	@tail -f logs/*.log
 
 test:
-	@chmod +x test-local.sh
-	@./test-local.sh
+	@chmod +x scripts/local/test-local.sh
+	@./scripts/local/test-local.sh
