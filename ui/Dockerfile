@@ -4,14 +4,14 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy UI package files
-COPY ui/package*.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm ci
 
-# Copy UI source code
-COPY ui/ ./
+# Copy source code
+COPY . ./
 
 # Build Vite app
 RUN npm run build
