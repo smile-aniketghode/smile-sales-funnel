@@ -327,11 +327,11 @@ export class DynamoDbService {
           total_tasks: allTasks.count,
           total_deals: allDeals.count,
           revenue,
-          revenue_trend: '+22%', // Placeholder - would need historical data
+          revenue_trend: revenue > 0 ? undefined : undefined, // Remove placeholder - calculate from historical data later
           active_deals: activeDeals,
           closing_this_week: closingThisWeek,
           conversion_rate: conversionRate,
-          conversion_trend: '+5%', // Placeholder - would need historical data
+          conversion_trend: undefined, // Remove placeholder - calculate from historical data later
           new_contacts: newContacts
         },
         generated_at: new Date().toISOString()
