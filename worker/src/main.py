@@ -136,16 +136,18 @@ async def gmail_auth_callback(
         logger.info(f"Gmail OAuth completed for: {user_email} (user_id: {user_id})")
 
         # Redirect to success page in UI
+        ui_base_url = os.getenv("UI_BASE_URL", "http://localhost:5173")
         return RedirectResponse(
-            url=f"http://localhost:5173/settings?gmail_connected=true&email={user_email}",
+            url=f"{ui_base_url}/settings?gmail_connected=true&email={user_email}",
             status_code=302
         )
 
     except Exception as e:
         logger.error(f"Gmail OAuth callback failed: {e}")
         # Redirect to error page
+        ui_base_url = os.getenv("UI_BASE_URL", "http://localhost:5173")
         return RedirectResponse(
-            url=f"http://localhost:5173/settings?gmail_error={str(e)}",
+            url=f"{ui_base_url}/settings?gmail_error={str(e)}",
             status_code=302
         )
 
