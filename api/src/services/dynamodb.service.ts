@@ -557,17 +557,17 @@ export class DynamoDbService {
       }
 
       // Transform DynamoDB items to contact format
-      const contacts = result.Items.map(item => ({
-        id: item.person_id?.S || '',
-        name: item.name?.S || 'Unknown',
-        email: item.email?.S || '',
-        company: item.company?.S || 'Unknown Company',
-        position: item.title?.S || item.role?.S || '',
-        segment: this.inferSegment(item.company?.S),
+      const contacts = result.Items.map((item: any) => ({
+        id: item.person_id || item.id || '',
+        name: item.name || 'Unknown',
+        email: item.email || '',
+        company: item.company || 'Unknown Company',
+        position: item.title || item.role || '',
+        segment: this.inferSegment(item.company),
         status: 'Active', // Could be derived from recent activity
         deal_value: 0, // Would need to aggregate from deals
-        last_contact: item.last_contact_date?.S || item.created_at?.S || new Date().toISOString(),
-        created_at: item.created_at?.S || new Date().toISOString()
+        last_contact: item.last_contact_date || item.created_at || new Date().toISOString(),
+        created_at: item.created_at || new Date().toISOString()
       }));
 
       return contacts;
