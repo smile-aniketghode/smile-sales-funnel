@@ -1,8 +1,8 @@
 // Demo mode state management hook - handles local-only state for simulated processing
 
 import { useState, useCallback } from 'react';
-import { DemoEmail, DemoStage, DemoState, DemoStats } from '../types/demo';
-import { Deal, Task, Contact } from '../types/api';
+import type { DemoEmail, DemoState, DemoStats } from '../types/demo';
+import { DemoStage } from '../types/demo';
 import { DEMO_EMAILS, calculateDemoStats } from '../data/demoData';
 
 /**

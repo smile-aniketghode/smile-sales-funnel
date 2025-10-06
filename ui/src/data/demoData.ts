@@ -1,6 +1,6 @@
 // Demo mode sample data - 5 realistic business emails with pre-computed extraction results
 
-import { DemoEmail } from '../types/demo';
+import type { DemoEmail } from '../types/demo';
 import { DealStage, DealStatus, TaskStatus, TaskPriority } from '../types/api';
 
 /**

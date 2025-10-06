@@ -1,6 +1,6 @@
 // Demo mode types - defines structure for simulated email processing demo
 
-import { Deal, Task, Contact, DealStage, DealStatus, TaskStatus, TaskPriority } from './api';
+import type { Deal, Task, Contact } from './api';
 
 /**
  * Represents a single email in the demo queue

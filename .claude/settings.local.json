@@ -75,7 +75,8 @@
       "Bash(railway logs:*)",
       "Bash(tree:*)",
       "Bash(git mv:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(make:*)"
     ],
     "deny": []
   }

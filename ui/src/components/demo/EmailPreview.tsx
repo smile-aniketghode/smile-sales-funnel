@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DemoEmail } from '../../types/demo';
+import type { DemoEmail } from '../../types/demo';
 
 interface EmailPreviewProps {
   email: DemoEmail;

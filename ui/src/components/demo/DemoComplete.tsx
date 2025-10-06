@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DemoStats } from '../../types/demo';
+import type { DemoStats } from '../../types/demo';
 
 interface DemoCompleteProps {
   stats: DemoStats;
@@ -37,7 +37,7 @@ export const DemoComplete: React.FC<DemoCompleteProps> = ({ stats, onReset, onCo
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: 'spring', damping: 15 },
+      transition: { type: 'spring' as const, damping: 15 },
     },
   };
 

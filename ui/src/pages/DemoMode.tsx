@@ -23,7 +23,6 @@ export const DemoMode: React.FC = () => {
     reset,
     getStats,
     getRemainingCount,
-    isProcessing,
     totalEmails,
   } = useDemoState();
 

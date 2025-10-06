@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Deal, Task, Contact, DealStage } from '../../types/api';
+import type { Deal, Task, Contact } from '../../types/api';
+import { DealStage } from '../../types/api';
 
 interface ExtractionResultsProps {
   deals: Deal[];
@@ -51,7 +52,7 @@ export const ExtractionResults: React.FC<ExtractionResultsProps> = ({ deals, tas
     visible: {
       x: 0,
       opacity: 1,
-      transition: { type: 'spring', damping: 20, stiffness: 300 },
+      transition: { type: 'spring' as const, damping: 20, stiffness: 300 },
     },
   };
 
