@@ -169,4 +169,36 @@ export const healthAPI = {
   },
 };
 
+// Demo API (calls worker service directly, not through main API)
+const WORKER_BASE_URL = import.meta.env.VITE_WORKER_BASE_URL || 'http://localhost:8000';
+
+export const demoAPI = {
+  // Process email with real AI extraction (demo mode, no auth, rate limited)
+  processEmail: async (emailText: string): Promise<{
+    status: string;
+    deals: any[];
+    tasks: any[];
+    contacts: any[];
+    rate_limit: {
+      remaining: number;
+      limit: number;
+      window: string;
+    };
+    demo_mode: boolean;
+    note: string;
+  }> => {
+    const response = await axios.post(
+      `${WORKER_BASE_URL}/demo/process-email`,
+      { email_text: emailText },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        timeout: 30000, // 30 second timeout for AI processing
+      }
+    );
+    return response.data;
+  },
+};
+
 export default apiClient;

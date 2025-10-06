@@ -1,10 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, File, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, JSONResponse
 import uvicorn
 from typing import Dict, Any, Optional
 import logging
+from collections import defaultdict
+import time
 
 from .graph.workflow import EmailProcessingWorkflow
 from .services.gmail_oauth import GmailOAuthService
@@ -60,6 +62,40 @@ async def startup_event():
 async def shutdown_event():
     """Stop background Gmail polling on app shutdown."""
     await gmail_poller.stop_polling()
+
+# ============================================================================
+# Rate Limiter for Demo Endpoint
+# ============================================================================
+
+class SimpleRateLimiter:
+    """Simple in-memory rate limiter for demo endpoint"""
+    def __init__(self, max_requests: int = 5, window_seconds: int = 3600):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.requests = defaultdict(list)  # IP -> [timestamps]
+
+    def is_allowed(self, ip: str) -> bool:
+        """Check if request from IP is allowed"""
+        now = time.time()
+        # Clean old requests
+        self.requests[ip] = [ts for ts in self.requests[ip] if now - ts < self.window_seconds]
+
+        # Check limit
+        if len(self.requests[ip]) >= self.max_requests:
+            return False
+
+        # Record request
+        self.requests[ip].append(now)
+        return True
+
+    def get_remaining(self, ip: str) -> int:
+        """Get remaining requests for IP"""
+        now = time.time()
+        self.requests[ip] = [ts for ts in self.requests[ip] if now - ts < self.window_seconds]
+        return max(0, self.max_requests - len(self.requests[ip]))
+
+# Initialize rate limiter: 5 requests per hour per IP
+demo_rate_limiter = SimpleRateLimiter(max_requests=5, window_seconds=3600)
 
 @app.get("/")
 async def health_check():
@@ -326,6 +362,75 @@ async def ingest_email_endpoint(file: UploadFile = File(...)) -> Dict[str, Any]:
         
     except Exception as e:
         logger.error(f"Error processing email: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+@app.post("/demo/process-email")
+async def process_demo_email(
+    request: Request,
+    email_text: str = Body(..., embed=True)
+) -> Dict[str, Any]:
+    """
+    Demo endpoint: Process email text with real AI extraction
+
+    **Public endpoint** - No authentication required
+    **Rate limited** - 5 requests per hour per IP
+    **No persistence** - Results not saved to database
+
+    Args:
+        email_text: Raw email content (with From, Subject, Body)
+
+    Returns:
+        Extracted deals, tasks, and contacts with confidence scores
+    """
+    try:
+        # Get client IP for rate limiting
+        client_ip = request.client.host if request.client else "unknown"
+
+        # Check rate limit
+        if not demo_rate_limiter.is_allowed(client_ip):
+            remaining = demo_rate_limiter.get_remaining(client_ip)
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded. You can process {demo_rate_limiter.max_requests} emails per hour. Try again later."
+            )
+
+        # Validate email length (max 5KB to prevent abuse)
+        if len(email_text) > 5000:
+            raise HTTPException(
+                status_code=400,
+                detail="Email too large. Maximum 5000 characters allowed for demo."
+            )
+
+        if len(email_text.strip()) < 10:
+            raise HTTPException(
+                status_code=400,
+                detail="Email content too short. Please provide valid email text."
+            )
+
+        logger.info(f"[DEMO] Processing email from IP: {client_ip} (length: {len(email_text)} chars)")
+
+        # Process through LangGraph workflow (same as real endpoint)
+        result = await workflow.process_email(email_text, source="demo")
+
+        # Add rate limit info to response
+        result["rate_limit"] = {
+            "remaining": demo_rate_limiter.get_remaining(client_ip),
+            "limit": demo_rate_limiter.max_requests,
+            "window": "1 hour"
+        }
+
+        # Add demo disclaimer
+        result["demo_mode"] = True
+        result["note"] = "Demo extraction - results not saved to database"
+
+        logger.info(f"[DEMO] Processing complete: {result['status']} (IP: {client_ip})")
+
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[DEMO] Error processing email: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
 @app.get("/stats")
