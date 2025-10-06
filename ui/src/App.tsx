@@ -7,6 +7,7 @@ import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
+import { DemoMode } from './pages/DemoMode';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -385,6 +386,11 @@ function AppContent() {
       navigate('/', { replace: true });
     }
   }, [isAuthenticated, location.pathname, navigate]);
+
+  // PUBLIC ROUTE: Demo mode (no auth required)
+  if (location.pathname === '/demo') {
+    return <DemoMode />;
+  }
 
   // Show Login page if not authenticated
   if (!isAuthenticated) {
