@@ -5,6 +5,8 @@ import { MetricCard } from '../components/MetricCard';
 import { HotDeals } from '../components/HotDeals';
 import { TodaysTasks } from '../components/TodaysTasks';
 import { AIInsights } from '../components/AIInsights';
+import { RecentContacts } from '../components/RecentContacts';
+import { RecentActivity } from '../components/RecentActivity';
 
 export const Dashboard: React.FC = () => {
   // Fetch enhanced statistics
@@ -92,16 +94,19 @@ export const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Widgets Grid */}
+      {/* Top Widgets Grid - Hot Deals & Today's Tasks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Hot Deals Widget */}
         <HotDeals />
-
-        {/* Today's Tasks Widget */}
         <TodaysTasks />
       </div>
 
-      {/* AI Insights Panel */}
+      {/* Middle Widgets Grid - Recent Contacts & Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <RecentContacts />
+        <RecentActivity />
+      </div>
+
+      {/* AI Insights Panel - Full Width */}
       <AIInsights />
 
       {/* Footer Info */}
