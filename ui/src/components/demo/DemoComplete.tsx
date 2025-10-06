@@ -110,10 +110,6 @@ export const DemoComplete: React.FC<DemoCompleteProps> = ({ stats, onReset, onCo
                   key={index}
                   variants={itemVariants}
                   whileHover={{ scale: 1.05 }}
-                  className="bg-gradient-to-br p-4 rounded-xl text-center shadow-lg text-white"
-                  style={{
-                    backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
-                  }}
                   className={`bg-gradient-to-br ${stat.color} p-4 rounded-xl text-center shadow-lg text-white`}
                 >
                   <div className="text-3xl mb-2">{stat.icon}</div>
