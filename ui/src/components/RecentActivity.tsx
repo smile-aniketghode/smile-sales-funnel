@@ -81,7 +81,7 @@ export const RecentActivity: React.FC = () => {
 
       {mockActivities.length > 0 ? (
         <div className="space-y-4">
-          {mockActivities.map((activity, index) => (
+          {mockActivities.map((activity) => (
             <div
               key={activity.id}
               className="flex items-start space-x-3 pb-4 border-b border-gray-100 last:border-b-0 last:pb-0"

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 export const RecentContacts: React.FC = () => {
   const { data: contacts, isLoading, isError } = useQuery({
     queryKey: ['contacts', 'recent'],
-    queryFn: () => contactAPI.getContacts(undefined, 5), // Get 5 most recent
+    queryFn: () => contactAPI.getContacts(5), // Get 5 most recent
     refetchInterval: 60000, // Refresh every minute
     retry: 1,
   });
