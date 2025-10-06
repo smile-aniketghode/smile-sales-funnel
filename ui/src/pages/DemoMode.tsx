@@ -223,71 +223,147 @@ export const DemoMode: React.FC = () => {
               />
             </div>
 
-            {/* Deals & Tasks Summary (simplified view) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Deals */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <span className="mr-2">💰</span>
-                  Active Deals ({state.deals.length})
-                </h3>
+            {/* Widgets Grid - matches real Dashboard */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Hot Deals Widget */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <span className="mr-2">🔥</span>
+                    Hot Deals
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {state.deals.filter(d => d.probability >= 70).length} urgent deals
+                  </span>
+                </div>
                 {state.deals.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">
-                    No deals yet - processing emails...
-                  </p>
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">No urgent deals at the moment</p>
+                    <p className="text-sm text-gray-400 mt-2">Deals closing soon will appear here</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {state.deals.map((deal) => (
-                      <motion.div
-                        key={deal.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="border-l-4 border-green-500 bg-green-50 p-3 rounded-r"
-                      >
-                        <div className="font-medium text-gray-900">{deal.title}</div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {deal.value ? formatCurrency(deal.value) : 'Value TBD'} •{' '}
-                          <span className="capitalize">{deal.stage}</span>
-                        </div>
-                      </motion.div>
-                    ))}
+                  <div className="space-y-3">
+                    {state.deals
+                      .filter(d => d.probability >= 70)
+                      .slice(0, 3)
+                      .map((deal) => (
+                        <motion.div
+                          key={deal.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r hover:bg-orange-100 transition-colors cursor-pointer"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-gray-900">{deal.title}</h4>
+                            {deal.value && (
+                              <span className="text-orange-700 font-bold">
+                                {formatCurrency(deal.value)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-3 text-sm text-gray-600">
+                            <span className="capitalize">{deal.stage}</span>
+                            <span>•</span>
+                            <span>{deal.probability}% probability</span>
+                            {deal.expected_close_date && (
+                              <>
+                                <span>•</span>
+                                <span>Close: {new Date(deal.expected_close_date).toLocaleDateString()}</span>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    {state.deals.length > 0 && state.deals.filter(d => d.probability >= 70).length === 0 && (
+                      <p className="text-center text-gray-500 py-8">
+                        No high-probability deals yet
+                      </p>
+                    )}
                   </div>
                 )}
+                <div className="mt-4 text-center">
+                  <a href="#" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    View all deals →
+                  </a>
+                </div>
               </div>
 
-              {/* Tasks */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <span className="mr-2">✅</span>
-                  Tasks ({state.tasks.length})
-                </h3>
+              {/* Today's Tasks Widget */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <span className="mr-2">✅</span>
+                    Today's Tasks
+                  </h3>
+                  <span className="text-sm text-gray-500">{state.tasks.length} tasks</span>
+                </div>
                 {state.tasks.length === 0 ? (
-                  <p className="text-gray-500 text-sm text-center py-8">
-                    No tasks yet - processing emails...
-                  </p>
+                  <div className="text-center py-12">
+                    <p className="text-gray-400">No tasks due today</p>
+                    <p className="text-sm text-gray-400 mt-2">You're all caught up! 🎉</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {state.tasks.map((task) => (
+                  <div className="space-y-3">
+                    {state.tasks.slice(0, 5).map((task) => (
                       <motion.div
                         key={task.id}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="border-l-4 border-blue-500 bg-blue-50 p-3 rounded-r"
+                        className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer"
                       >
-                        <div className="font-medium text-gray-900">{task.title}</div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {task.priority && (
-                            <span className="capitalize">{task.priority} priority</span>
-                          )}
-                          {task.due_date && (
-                            <span> • Due {new Date(task.due_date).toLocaleDateString()}</span>
-                          )}
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          disabled
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{task.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+                          <div className="flex items-center space-x-3 mt-2 text-xs text-gray-500">
+                            {task.priority && (
+                              <span className={`px-2 py-1 rounded ${
+                                task.priority === 'high' ? 'bg-red-100 text-red-700' :
+                                task.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {task.priority}
+                              </span>
+                            )}
+                            {task.due_date && (
+                              <span>📅 {new Date(task.due_date).toLocaleDateString()}</span>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 )}
+                <div className="mt-4 text-center">
+                  <a href="#" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                    View all tasks →
+                  </a>
+                </div>
               </div>
+            </div>
+
+            {/* AI Insights Panel */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <span className="mr-2">🤖</span>
+                  AI-Powered Insights
+                </h3>
+                <span className="text-sm text-gray-500">0 insights</span>
+              </div>
+              <div className="text-center py-12">
+                <p className="text-gray-400">No insights available</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  AI will analyze your sales data for recommendations
+                </p>
+              </div>
+              <p className="text-xs text-gray-500 text-center mt-4 italic">
+                💡 Insights are generated based on your email activity and deal patterns
+              </p>
             </div>
           </div>
         )}
