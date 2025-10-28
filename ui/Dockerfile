@@ -31,8 +31,11 @@ RUN npm install -g serve
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
 
+# Copy serve config
+COPY serve.json ./
+
 # Expose port (Railway will set PORT env var)
 EXPOSE 5173
 
-# Serve static files
-CMD serve -s dist -l ${PORT:-5173}
+# Serve static files with config
+CMD serve -s dist -l ${PORT:-5173} -c serve.json --no-clipboard
