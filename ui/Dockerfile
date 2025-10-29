@@ -1,6 +1,5 @@
 # UI Service Dockerfile (for Railway monorepo deployment)
 # Multi-stage build
-# BUILD VERSION: 2025-10-29-v3-clean
 FROM node:18-alpine AS builder
 
 WORKDIR /app
@@ -11,14 +10,8 @@ COPY package*.json ./
 # Install all dependencies (including dev for build)
 RUN npm ci
 
-# Copy ONLY necessary source files (exclude everything else)
-COPY src ./src
-COPY public ./public
-COPY index.html ./
-COPY vite.config.ts ./
-COPY tsconfig.json ./
-COPY tsconfig.app.json ./
-COPY tsconfig.node.json ./
+# Copy all source files
+COPY . ./
 
 # Build Vite app with environment variables
 ARG VITE_API_BASE_URL
