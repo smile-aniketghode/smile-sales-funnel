@@ -1,5 +1,6 @@
 # UI Service Dockerfile (for Railway monorepo deployment)
 # Multi-stage build
+# BUILD VERSION: 2025-10-29-v2
 FROM node:18-alpine AS builder
 
 WORKDIR /app
