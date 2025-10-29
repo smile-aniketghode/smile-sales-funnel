@@ -17,6 +17,7 @@ COPY public ./public
 COPY index.html ./
 COPY vite.config.ts ./
 COPY tsconfig.json ./
+COPY tsconfig.app.json ./
 COPY tsconfig.node.json ./
 
 # Build Vite app with environment variables
