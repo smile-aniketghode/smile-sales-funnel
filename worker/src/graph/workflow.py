@@ -16,7 +16,7 @@ from .nodes import (
     EmitEventNode
 )
 from ..models import EmailLog, PrefilterResult, ProcessingStatus
-from ..utils import extract_text_content, extract_email_address
+from ..utils import extract_text_content, extract_email_address, extract_sender_name
 
 logger = logging.getLogger(__name__)
 
@@ -123,17 +123,20 @@ class EmailProcessingWorkflow:
             email_msg = email.message_from_string(mime_content)
             message_id = email_msg.get('Message-ID', f"unknown-{int(time.time())}")
             subject = email_msg.get('Subject', '')
-            sender_email = extract_email_address(email_msg.get('From', ''))
-            
+            from_header = email_msg.get('From', '')
+            sender_email = extract_email_address(from_header)
+            sender_name = extract_sender_name(from_header)
+
             # Generate message hash for idempotency
             content = extract_text_content(email_msg)
             message_hash = EmailLog.generate_message_hash(message_id, content)
-            
+
             # Create initial state
             initial_state: EmailProcessingState = {
                 "message_id": message_id,
                 "subject": subject,
                 "sender_email": sender_email,
+                "sender_name": sender_name,
                 "raw_content": mime_content,
                 "source": source,
                 "user_id": user_id or "default_user",  # Fallback for backward compatibility

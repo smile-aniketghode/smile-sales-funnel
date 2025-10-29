@@ -39,10 +39,10 @@ def extract_text_content(email_msg: EmailMessage) -> str:
 def extract_email_address(from_header: str) -> str:
     """
     Extract email address from From header
-    
+
     Args:
         from_header: Raw From header string
-        
+
     Returns:
         Cleaned email address
     """
@@ -57,3 +57,32 @@ def extract_email_address(from_header: str) -> str:
             if '@' in part:
                 return part.lower()
     return from_header.lower()
+
+
+def extract_sender_name(from_header: str) -> str:
+    """
+    Extract sender name from From header
+
+    Examples:
+        "Sachin Shelke <sachin@example.com>" -> "Sachin Shelke"
+        "John Doe" <john@example.com> -> "John Doe"
+        "john@example.com" -> None
+
+    Args:
+        from_header: Raw From header string
+
+    Returns:
+        Sender name or None if not found
+    """
+    if '<' in from_header and '>' in from_header:
+        # Extract name before the email address
+        name = from_header[:from_header.find('<')].strip()
+        # Remove quotes if present
+        name = name.strip('"').strip("'").strip()
+        return name if name else None
+    else:
+        # If no angle brackets, check if it looks like an email
+        if '@' in from_header:
+            return None
+        # Otherwise treat the whole thing as a name
+        return from_header.strip()

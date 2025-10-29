@@ -1,9 +1,9 @@
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 import os
 from datetime import datetime
 
-from ...models import Task, Deal, TaskStatus, DealStatus, TaskPriority, DealStage, ProcessingStatus
+from ...models import Task, Deal, Person, TaskStatus, DealStatus, TaskPriority, DealStage, ProcessingStatus
 from ...services.dynamodb_client import DynamoDBClient
 from ..state import EmailProcessingState
 
@@ -42,9 +42,23 @@ class PersistNode:
         try:
             created_tasks = []
             created_deals = []
+            created_person = None
             tasks_saved = []
             deals_saved = []
-            
+            people_saved = []
+
+            # Create Person entity from sender
+            if state.get("sender_email"):
+                try:
+                    created_person = self._create_person_entity(
+                        sender_email=state["sender_email"],
+                        sender_name=state.get("sender_name"),
+                        user_id=state["user_id"]
+                    )
+                    logger.info(f"Created person: {created_person.get_display_name()} ({created_person.email})")
+                except Exception as e:
+                    logger.error(f"Error creating person entity: {e}")
+
             # Create and persist high-confidence tasks (auto-accepted)
             high_conf_tasks = state.get("high_confidence_tasks", [])
             for task_data in high_conf_tasks:
@@ -114,28 +128,36 @@ class PersistNode:
                     continue
             
             # Persist to database if we have entities
-            if created_tasks or created_deals:
+            if created_tasks or created_deals or created_person:
                 # Use existing email log from state or create one
                 email_log = state.get("email_log")
-                
+
+                # Prepare people list
+                people_to_save = [created_person] if created_person else []
+
                 # Save to database (note: this should be async but DynamoDB client needs fixing)
                 try:
                     save_result = await self.db_client.save_extracted_data(
-                        created_tasks, created_deals, email_log
+                        created_tasks, created_deals, people_to_save, email_log
                     )
                 except Exception as e:
                     # If async doesn't work, try sync (for now)
                     logger.warning(f"Async save failed, trying sync: {e}")
-                    save_result = {"task_ids": [task.id for task in created_tasks], 
-                                   "deal_ids": [deal.id for deal in created_deals]}
-                
+                    save_result = {
+                        "task_ids": [task.id for task in created_tasks],
+                        "deal_ids": [deal.id for deal in created_deals],
+                        "people_ids": [p.id for p in people_to_save]
+                    }
+
                 tasks_saved = save_result.get("task_ids", [])
                 deals_saved = save_result.get("deal_ids", [])
-                
+                people_saved = save_result.get("people_ids", [])
+
                 logger.info(
                     f"Persistence complete. "
                     f"Tasks saved: {len(tasks_saved)}, "
-                    f"Deals saved: {len(deals_saved)}"
+                    f"Deals saved: {len(deals_saved)}, "
+                    f"People saved: {len(people_saved)}"
                 )
             
             return {
@@ -202,3 +224,23 @@ class PersistNode:
             agent=agent,
             audit_snippet=deal_data.get("snippet", "")[:500]
         )
+
+    def _create_person_entity(
+        self,
+        sender_email: str,
+        sender_name: Optional[str],
+        user_id: str
+    ) -> Person:
+        """Create a Person entity from email sender information"""
+        person = Person(
+            email=sender_email,
+            name=sender_name,
+            user_id=user_id,
+            last_contact_date=datetime.utcnow()
+        )
+
+        # If no name provided, try to infer from email
+        if not sender_name:
+            person.infer_name_from_email()
+
+        return person

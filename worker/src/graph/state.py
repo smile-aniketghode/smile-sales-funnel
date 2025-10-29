@@ -10,6 +10,7 @@ class EmailProcessingState(TypedDict):
     message_id: str
     subject: str
     sender_email: str
+    sender_name: Optional[str]
     raw_content: str
     source: str
     user_id: str  # Gmail account/user that owns this email

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from botocore.exceptions import ClientError
 
 from ..models import Task, Deal, EmailLog, Person, Company
+from botocore.exceptions import ClientError as BotoClientError
 
 logger = logging.getLogger(__name__)
 
@@ -49,26 +50,48 @@ class DynamoDBClient:
         }
     
     async def save_extracted_data(
-        self, 
-        tasks: List[Task], 
-        deals: List[Deal], 
+        self,
+        tasks: List[Task],
+        deals: List[Deal],
+        people: List[Person],
         email_log: EmailLog
     ) -> Dict[str, Any]:
         """
-        Save extracted tasks and deals to DynamoDB
-        
+        Save extracted tasks, deals, and people to DynamoDB
+
         Args:
             tasks: List of extracted tasks
             deals: List of extracted deals
+            people: List of extracted people/contacts
             email_log: Email processing log
-            
+
         Returns:
             Save operation results
         """
         try:
             saved_tasks = []
             saved_deals = []
-            
+            saved_people = []
+
+            # Save people (with upsert logic - update if exists, insert if new)
+            for person in people:
+                try:
+                    # Check if person already exists by email
+                    existing = await self.get_person_by_email(person.email)
+
+                    if existing:
+                        # Update existing person - merge last_contact_date
+                        person.id = existing.get('id')  # Keep existing ID
+                        # Note: In production, you'd do more sophisticated merging
+                        logger.debug(f"Updating existing person: {person.email}")
+
+                    self.tables['people'].put_item(Item=person.to_dynamodb_item())
+                    saved_people.append(person.id)
+                    logger.debug(f"Saved person: {person.get_display_name()} ({person.email})")
+                except Exception as e:
+                    logger.error(f"Error saving person {person.email}: {e}")
+                    continue
+
             # Save tasks
             for task in tasks:
                 try:
@@ -78,7 +101,7 @@ class DynamoDBClient:
                 except Exception as e:
                     logger.error(f"Error saving task {task.id}: {e}")
                     continue
-            
+
             # Save deals
             for deal in deals:
                 try:
@@ -88,16 +111,18 @@ class DynamoDBClient:
                 except Exception as e:
                     logger.error(f"Error saving deal {deal.id}: {e}")
                     continue
-            
+
             logger.info(f"Saved {len(saved_tasks)} tasks and {len(saved_deals)} deals")
-            
+
             return {
                 "tasks_saved": len(saved_tasks),
                 "deals_saved": len(saved_deals),
+                "people_saved": len(saved_people),
                 "task_ids": saved_tasks,
-                "deal_ids": saved_deals
+                "deal_ids": saved_deals,
+                "people_ids": saved_people
             }
-            
+
         except Exception as e:
             logger.error(f"Error saving extracted data: {e}")
             raise
@@ -212,7 +237,21 @@ class DynamoDBClient:
         except Exception as e:
             logger.error(f"Error getting deal {deal_id}: {e}")
             return None
-    
+
+    async def get_person_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get a person by email address using the email-index GSI"""
+        try:
+            response = self.tables['people'].query(
+                IndexName='email-index',
+                KeyConditionExpression=Key('email').eq(email.lower()),
+                Limit=1
+            )
+            items = response.get('Items', [])
+            return items[0] if items else None
+        except Exception as e:
+            logger.error(f"Error getting person by email {email}: {e}")
+            return None
+
     async def update_task(self, task_id: str, updates: Dict[str, Any]) -> bool:
         """Update a task with provided fields"""
         try:
