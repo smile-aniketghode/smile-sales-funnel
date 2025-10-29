@@ -1,5 +1,6 @@
 from typing import Dict, Any, List
 import logging
+import os
 from datetime import datetime
 
 from ...models import Task, Deal, TaskStatus, DealStatus, TaskPriority, DealStage, ProcessingStatus
@@ -11,9 +12,18 @@ logger = logging.getLogger(__name__)
 
 class PersistNode:
     """LangGraph node for persisting extracted entities to DynamoDB"""
-    
+
     def __init__(self):
-        self.db_client = DynamoDBClient()
+        # Read table prefix from environment
+        table_prefix = os.getenv("TABLE_PREFIX", "smile-sales-funnel-dev")
+        region = os.getenv("AWS_REGION", "us-east-1")
+        endpoint_url = os.getenv("DYNAMODB_ENDPOINT")
+
+        self.db_client = DynamoDBClient(
+            region=region,
+            table_prefix=table_prefix,
+            endpoint_url=endpoint_url
+        )
     
     async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
