@@ -140,13 +140,27 @@ const tables = [
       ],
       AttributeDefinitions: [
         { AttributeName: 'id', AttributeType: 'S' },
-        { AttributeName: 'email', AttributeType: 'S' }
+        { AttributeName: 'email', AttributeType: 'S' },
+        { AttributeName: 'user_id', AttributeType: 'S' },
+        { AttributeName: 'created_at', AttributeType: 'S' }
       ],
       GlobalSecondaryIndexes: [
         {
           IndexName: 'email-index',
           KeySchema: [
             { AttributeName: 'email', KeyType: 'HASH' }
+          ],
+          Projection: { ProjectionType: 'ALL' },
+          ProvisionedThroughput: {
+            ReadCapacityUnits: 5,
+            WriteCapacityUnits: 5
+          }
+        },
+        {
+          IndexName: 'user_id-created_at-index',
+          KeySchema: [
+            { AttributeName: 'user_id', KeyType: 'HASH' },
+            { AttributeName: 'created_at', KeyType: 'RANGE' }
           ],
           Projection: { ProjectionType: 'ALL' },
           ProvisionedThroughput: {
