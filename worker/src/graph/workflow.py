@@ -45,6 +45,18 @@ class EmailProcessingWorkflow:
         self.confidence_gate_node = ConfidenceGateNode(confidence_threshold)
         self.persist_node = PersistNode()
         self.emit_event_node = EmitEventNode()
+
+        # Initialize DynamoDB client for idempotency check
+        import os
+        from ..services.dynamodb_client import DynamoDBClient
+        table_prefix = os.getenv("TABLE_PREFIX", "smile-sales-funnel-dev")
+        region = os.getenv("AWS_REGION", "us-east-1")
+        endpoint_url = os.getenv("DYNAMODB_ENDPOINT")
+        self.db_client = DynamoDBClient(
+            region=region,
+            table_prefix=table_prefix,
+            endpoint_url=endpoint_url
+        )
         
         # Build the graph
         self.workflow = self._build_workflow()
@@ -131,6 +143,20 @@ class EmailProcessingWorkflow:
             content = extract_text_content(email_msg)
             message_hash = EmailLog.generate_message_hash(message_id, content)
 
+            # Check if email was already processed (idempotency)
+            existing_log = await self.db_client.get_email_log(message_hash)
+            if existing_log:
+                logger.info(f"Email already processed (hash: {message_hash[:16]}...), skipping")
+                return {
+                    "status": "skipped",
+                    "reason": "already_processed",
+                    "message_id": message_id,
+                    "message_hash": message_hash,
+                    "previous_processing_time": existing_log.get("created_at"),
+                    "tasks_created": 0,
+                    "deals_created": 0
+                }
+
             # Create initial state
             initial_state: EmailProcessingState = {
                 "message_id": message_id,
@@ -179,7 +205,7 @@ class EmailProcessingWorkflow:
             processing_time = int((time.time() - start_time) * 1000)
             final_state["processing_time_ms"] = processing_time
             
-            # Update email log
+            # Update and save email log for idempotency
             if "email_log" in final_state:
                 email_log = final_state["email_log"]
                 email_log.processing_time_ms = processing_time
@@ -187,7 +213,14 @@ class EmailProcessingWorkflow:
                 email_log.llm_tokens_used = final_state.get("tokens_used", 0)
                 email_log.tasks_created = final_state.get("tasks_saved", [])
                 email_log.deals_created = final_state.get("deals_saved", [])
-            
+
+                # Save email log to database for idempotency tracking
+                try:
+                    await self.db_client.save_email_log(email_log)
+                    logger.debug(f"Saved email log for idempotency: {message_hash[:16]}...")
+                except Exception as e:
+                    logger.error(f"Failed to save email log: {e}")
+
             logger.info(
                 f"Workflow complete in {processing_time}ms. "
                 f"Status: {final_state.get('status')}, "
