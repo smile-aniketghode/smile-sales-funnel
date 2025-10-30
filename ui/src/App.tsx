@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Dashboard } from './pages/Dashboard';
 import { Pipeline } from './pages/Pipeline';
@@ -364,6 +364,7 @@ function formatIndianCurrency(value: number): string {
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('user_id');
   });
@@ -430,6 +431,21 @@ function AppContent() {
   }
   if (location.pathname === '/demo-ai') {
     return <RealDemoMode />;
+  }
+
+  // OAUTH CALLBACK ROUTE - must be accessible before auth check
+  // Settings page handles gmail_connected callback params
+  if (location.pathname === '/settings') {
+    const hasOAuthParams = searchParams.get('gmail_connected') || searchParams.get('gmail_error');
+    // Allow Settings access during OAuth callback (before authentication)
+    if (hasOAuthParams || isAuthenticated) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          {isAuthenticated && <Navigation />}
+          <Settings />
+        </div>
+      );
+    }
   }
 
   // ONBOARDING ROUTES (no navigation bar)
