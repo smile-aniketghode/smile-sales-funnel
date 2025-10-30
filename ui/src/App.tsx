@@ -440,6 +440,11 @@ function AppContent() {
 
   // Show Login or Welcome page if not authenticated
   if (!isAuthenticated) {
+    // If explicitly on /login, show Login page (don't redirect to Welcome)
+    if (location.pathname === '/login') {
+      return <Login />;
+    }
+
     // For first-time users, show Welcome page instead of Login
     const onboardingState = checkOnboardingState();
     if (onboardingState.needsOnboarding && onboardingState.redirectTo === '/welcome') {
