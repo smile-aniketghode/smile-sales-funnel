@@ -93,6 +93,7 @@ class DynamoDBCleanup:
     def delete_tasks_by_user(self, user_id: str, limit: int = 100) -> Dict[str, Any]:
         """Delete all tasks for a user (batch delete)"""
         try:
+            logger.debug(f"Querying tasks table: {self.tables['tasks'].name}, Index: user_id-created_at-index, User: {user_id}")
             response = self.tables['tasks'].query(
                 IndexName='user_id-created_at-index',
                 KeyConditionExpression=Key('user_id').eq(user_id),

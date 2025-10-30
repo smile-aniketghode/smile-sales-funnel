@@ -43,6 +43,9 @@ WORKER_BASE_URL = os.getenv("WORKER_BASE_URL", "https://worker-production-2fb2.u
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 TABLE_PREFIX = os.getenv("TABLE_PREFIX", "smile-sales-funnel-prod")
 
+# AWS credentials must be set via environment variables or ~/.aws/credentials
+# Required env vars: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION
+
 # Test email scenarios
 TEST_EMAILS = [
     {
