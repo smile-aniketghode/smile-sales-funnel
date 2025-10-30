@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const WORKER_API_BASE = import.meta.env.VITE_WORKER_API_BASE_URL || 'http://localhost:8000';
 
@@ -21,6 +21,7 @@ interface PollingStatus {
 
 export const Settings: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -51,11 +52,14 @@ export const Settings: React.FC = () => {
         return;
       }
 
-      // Existing user reconnecting - show success message
+      // Existing user reconnecting - show success and redirect to dashboard
       setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 5000);
+      console.log('✅ Returning user authenticated, redirecting to dashboard');
 
-      console.log('✅ User ID stored after OAuth:', callbackEmail);
+      // Redirect to dashboard after brief success message
+      setTimeout(() => {
+        navigate('/', { replace: true });
+      }, 1500);
     } else if (error) {
       setErrorMessage(error || 'Failed to connect Gmail');
       setShowError(true);
