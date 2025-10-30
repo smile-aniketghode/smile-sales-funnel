@@ -41,6 +41,17 @@ export const Settings: React.FC = () => {
       localStorage.setItem('user_email', callbackEmail);
       setUserId(callbackEmail);
 
+      // Check if this is part of onboarding flow
+      const onboardingComplete = localStorage.getItem('onboarding_complete');
+
+      if (!onboardingComplete) {
+        // First-time connection - redirect to analyzing page
+        console.log('🎯 First-time Gmail connection, redirecting to onboarding');
+        window.location.href = '/onboarding/analyzing?gmail_connected=true';
+        return;
+      }
+
+      // Existing user reconnecting - show success message
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
 
@@ -202,7 +213,15 @@ export const Settings: React.FC = () => {
               </div>
               <div className="mt-2 text-sm text-green-800">
                 <p><strong>Email:</strong> {gmailStatus.email}</p>
-                <p><strong>Last Updated:</strong> {new Date(gmailStatus.last_updated).toLocaleString()}</p>
+                <p><strong>Last Updated:</strong> {new Date(gmailStatus.last_updated).toLocaleString(undefined, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: true
+                })}</p>
               </div>
             </div>
 
@@ -247,6 +266,19 @@ export const Settings: React.FC = () => {
                   <p>• Tasks Extracted: {syncMutation.data.tasks_extracted || 0}</p>
                   <p>• Deals Extracted: {syncMutation.data.deals_extracted || 0}</p>
                 </div>
+                {syncMutation.data.tasks_extracted === 0 && syncMutation.data.deals_extracted === 0 && (
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <p className="text-sm text-blue-700 mb-2">
+                      💡 No sales activity found? Try our demo mode to see the system in action:
+                    </p>
+                    <a
+                      href="/demo"
+                      className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                    >
+                      🎬 Try Demo Mode
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -319,7 +351,15 @@ export const Settings: React.FC = () => {
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-600 font-medium">Last Sync</p>
               <p className="text-sm text-blue-800">
-                {new Date(userId && pollingStatus.last_sync_times[userId]).toLocaleString()}
+                {new Date(pollingStatus.last_sync_times[userId]).toLocaleString(undefined, {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                  hour12: true
+                })}
               </p>
             </div>
           )}

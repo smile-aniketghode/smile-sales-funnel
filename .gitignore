@@ -116,3 +116,4 @@ ENV/worker/client_secret_*.json
 
 # OAuth client secrets (contains sensitive credentials)
 worker/client_secret_*.json
+.claude/settings.local.json

@@ -1,6 +1,9 @@
 // Recent Activity feed - shows last 10 actions/events in the system
 
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+const WORKER_API_BASE = import.meta.env.VITE_WORKER_API_BASE_URL || 'http://localhost:8000';
 
 interface ActivityItem {
   id: string;
@@ -12,38 +15,36 @@ interface ActivityItem {
   color: string;
 }
 
+interface ProcessingStats {
+  week_stats: {
+    emails_processed: number;
+    successful_extractions: number;
+  };
+  current_pending: {
+    draft_tasks: number;
+    draft_deals: number;
+  };
+}
+
 export const RecentActivity: React.FC = () => {
-  // TODO: Replace with real API call when backend supports activity feed
-  // For now, showing placeholder/mock data
-  const mockActivities: ActivityItem[] = [
-    {
-      id: '1',
-      type: 'email_processed',
-      title: 'Email processed',
-      description: 'AI extracted 1 deal and 2 tasks from priya.sharma@techcorp.in',
-      timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-      icon: '📧',
-      color: 'blue',
+  const userId = localStorage.getItem('user_id');
+
+  // Fetch processing stats to determine state
+  const { data: stats, isLoading } = useQuery<ProcessingStats>({
+    queryKey: ['processing-stats'],
+    queryFn: async () => {
+      const res = await fetch(`${WORKER_API_BASE}/stats`);
+      return res.json();
     },
-    {
-      id: '2',
-      type: 'deal_created',
-      title: 'Deal created',
-      description: 'TechCorp - ₹75L enterprise deployment added to pipeline',
-      timestamp: new Date(Date.now() - 10 * 60000).toISOString(),
-      icon: '💰',
-      color: 'green',
-    },
-    {
-      id: '3',
-      type: 'task_completed',
-      title: 'Task completed',
-      description: 'Send proposal to Startup.io marked as done',
-      timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-      icon: '✅',
-      color: 'purple',
-    },
-  ];
+    refetchInterval: 30000, // Refresh every 30s
+    enabled: !!userId,
+  });
+
+  // TODO: Replace with real activity feed API when available
+  const mockActivities: ActivityItem[] = [];
+
+  const hasProcessedEmails = stats && stats.week_stats.emails_processed > 0;
+  const hasExtractions = stats && stats.week_stats.successful_extractions > 0;
 
   const getTimeAgo = (timestamp: string): string => {
     const now = Date.now();
@@ -79,7 +80,11 @@ export const RecentActivity: React.FC = () => {
         <span className="text-sm text-gray-500">Last 24 hours</span>
       </div>
 
-      {mockActivities.length > 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : mockActivities.length > 0 ? (
         <div className="space-y-4">
           {mockActivities.map((activity) => (
             <div
@@ -103,11 +108,20 @@ export const RecentActivity: React.FC = () => {
             </div>
           ))}
         </div>
+      ) : hasProcessedEmails && !hasExtractions ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-3">🔍</div>
+          <p className="text-gray-700 font-medium">Emails processed, no sales activity detected</p>
+          <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto">
+            AI analyzed your recent emails but didn't find any deals or tasks. This is normal if your inbox doesn't contain sales-related content.
+          </p>
+        </div>
       ) : (
         <div className="text-center py-12">
+          <div className="text-4xl mb-3">📭</div>
           <p className="text-gray-400">No recent activity</p>
           <p className="text-sm text-gray-400 mt-2">
-            Activity will appear here as you process emails
+            Sync your Gmail to start processing emails
           </p>
         </div>
       )}

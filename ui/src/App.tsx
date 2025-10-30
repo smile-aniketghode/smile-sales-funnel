@@ -9,6 +9,10 @@ import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
 import { DemoMode } from './pages/DemoMode';
 import { RealDemoMode } from './pages/RealDemoMode';
+import { Welcome } from './pages/Welcome';
+import { OnboardingAnalyzing } from './pages/OnboardingAnalyzing';
+import { OnboardingResults } from './pages/OnboardingResults';
+import { checkOnboardingState } from './services/onboarding';
 import './App.css';
 
 const queryClient = new QueryClient({
@@ -380,11 +384,38 @@ function AppContent() {
     return () => window.removeEventListener('storage', checkAuth);
   }, [location]);
 
+  // Onboarding guard - check if user needs onboarding
+  useEffect(() => {
+    const onboardingPaths = ['/welcome', '/onboarding/analyzing', '/onboarding/results'];
+    const isOnboardingPath = onboardingPaths.some(path => location.pathname.startsWith(path));
+
+    // Skip onboarding check for public routes and onboarding itself
+    if (location.pathname === '/demo' ||
+        location.pathname === '/demo-ai' ||
+        location.pathname === '/login' ||
+        isOnboardingPath) {
+      return;
+    }
+
+    const onboardingState = checkOnboardingState();
+
+    if (onboardingState.needsOnboarding && onboardingState.redirectTo) {
+      console.log('🎯 User needs onboarding, redirecting to:', onboardingState.redirectTo);
+      navigate(onboardingState.redirectTo, { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
   // Redirect authenticated users away from login page
   useEffect(() => {
     if (isAuthenticated && location.pathname === '/login') {
-      console.log('✅ Already authenticated, redirecting to dashboard');
-      navigate('/', { replace: true });
+      console.log('✅ Already authenticated, checking onboarding status');
+      const onboardingState = checkOnboardingState();
+
+      if (onboardingState.needsOnboarding && onboardingState.redirectTo) {
+        navigate(onboardingState.redirectTo, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
   }, [isAuthenticated, location.pathname, navigate]);
 
@@ -396,8 +427,24 @@ function AppContent() {
     return <RealDemoMode />;
   }
 
-  // Show Login page if not authenticated
+  // ONBOARDING ROUTES (no navigation bar)
+  if (location.pathname === '/welcome') {
+    return <Welcome />;
+  }
+  if (location.pathname === '/onboarding/analyzing') {
+    return <OnboardingAnalyzing />;
+  }
+  if (location.pathname.startsWith('/onboarding/results')) {
+    return <OnboardingResults />;
+  }
+
+  // Show Login or Welcome page if not authenticated
   if (!isAuthenticated) {
+    // For first-time users, show Welcome page instead of Login
+    const onboardingState = checkOnboardingState();
+    if (onboardingState.needsOnboarding && onboardingState.redirectTo === '/welcome') {
+      return <Welcome />;
+    }
     return <Login />;
   }
 
@@ -410,6 +457,7 @@ function AppContent() {
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/inbox" element={<AIInbox />} />
+        <Route path="/ai-inbox" element={<AIInbox />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>

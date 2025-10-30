@@ -48,6 +48,9 @@ export const Dashboard: React.FC = () => {
   const conversionTrend = stats?.summary?.conversion_trend || '+0%';
   const newContacts = stats?.summary?.new_contacts || 0;
 
+  // Check if user has any data
+  const hasAnyData = activeDeals > 0 || newContacts > 0 || revenue > 0;
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
@@ -55,6 +58,29 @@ export const Dashboard: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
         <p className="text-gray-600">Sales funnel overview and key metrics</p>
       </div>
+
+      {/* No Data Banner */}
+      {!hasAnyData && (
+        <div className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="text-4xl">💡</div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Your pipeline is empty
+              </h3>
+              <p className="text-gray-700 mb-3">
+                No sales data found in your inbox yet. Want to see how the system works?
+              </p>
+              <a
+                href="/demo"
+                className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+              >
+                🎬 Try Demo Mode with Sample Emails
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

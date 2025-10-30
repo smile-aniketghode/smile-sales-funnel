@@ -17,13 +17,22 @@ export const Login: React.FC = () => {
     const errorParam = searchParams.get('gmail_error');
 
     if (connected === 'true' && callbackEmail) {
-      // Store user_id and redirect to dashboard
+      // Store user_id
       localStorage.setItem('user_id', callbackEmail);
       localStorage.setItem('user_email', callbackEmail);
       console.log('✅ User authenticated:', callbackEmail);
 
-      // Force a full page reload to update auth state in App.tsx
-      window.location.href = '/';
+      // Check if this is first-time connection (onboarding flow)
+      const onboardingComplete = localStorage.getItem('onboarding_complete');
+
+      if (!onboardingComplete) {
+        // First-time user - redirect to analyzing page for onboarding
+        console.log('🎯 First-time connection, starting onboarding');
+        window.location.href = '/onboarding/analyzing?gmail_connected=true';
+      } else {
+        // Returning user - go to dashboard
+        window.location.href = '/';
+      }
     } else if (errorParam) {
       setError(errorParam || 'Failed to connect Gmail');
       setIsConnecting(false);
