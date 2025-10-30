@@ -6,7 +6,6 @@ import { Pipeline } from './pages/Pipeline';
 import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
 import { Settings } from './pages/Settings';
-import { Login } from './pages/Login';
 import { DemoMode } from './pages/DemoMode';
 import { RealDemoMode } from './pages/RealDemoMode';
 import { Welcome } from './pages/Welcome';
