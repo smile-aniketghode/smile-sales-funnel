@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 # Configuration from environment
 USER_ID = os.getenv("TEST_USER_ID", "aniket.ghode@shreemaruti.com")
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api-production-20f0.up.railway.app")
-WORKER_BASE_URL = os.getenv("WORKER_BASE_URL", "https://worker-production-4ef4.up.railway.app")
+WORKER_BASE_URL = os.getenv("WORKER_BASE_URL", "https://worker-production-2fb2.up.railway.app")
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 TABLE_PREFIX = os.getenv("TABLE_PREFIX", "smile-sales-funnel-prod")
 
@@ -166,9 +166,9 @@ class E2ETestRunner:
 
     def send_test_email(self, email_data: dict) -> bool:
         """
-        Send test email via worker /demo/process-email endpoint
+        Send test email via worker /test/process-email endpoint
 
-        This bypasses Gmail delivery but still tests full extraction pipeline
+        This bypasses Gmail delivery but tests full extraction pipeline with correct user_id
         """
         try:
             logger.info(f"📧 Sending test email from {email_data['from_name']} ({email_data['from_email']})")
@@ -181,18 +181,26 @@ Date: {datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0000')}
 
 {email_data['body']}"""
 
-            # Send to worker demo endpoint
+            # Send to worker test endpoint with user_id
             response = requests.post(
-                f"{self.worker_base}/demo/process-email",
-                json={'email_text': email_text},
+                f"{self.worker_base}/test/process-email",
+                json={
+                    'email_text': email_text,
+                    'user_id': self.user_id
+                },
                 timeout=30
             )
             response.raise_for_status()
 
             result = response.json()
             logger.info(f"✅ Email processed. Status: {result.get('status')}")
-            logger.info(f"   Tasks extracted: {len(result.get('extraction_result', {}).get('tasks', []))}")
-            logger.info(f"   Deals extracted: {len(result.get('extraction_result', {}).get('deals', []))}")
+
+            # Log extraction results
+            tasks_saved = result.get('tasks_saved', [])
+            deals_saved = result.get('deals_saved', [])
+
+            logger.info(f"   Tasks saved: {len(tasks_saved)}")
+            logger.info(f"   Deals saved: {len(deals_saved)}")
 
             return True
 
@@ -200,13 +208,10 @@ Date: {datetime.now().strftime('%a, %d %b %Y %H:%M:%S +0000')}
             logger.error(f"❌ Failed to send/process email: {e}")
             return False
 
-    def wait_for_processing(self, seconds: int = 60):
-        """Wait for worker to poll and process emails"""
-        logger.info(f"⏳ Waiting {seconds}s for worker to poll and process emails...")
-        for i in range(seconds):
-            if i % 10 == 0 and i > 0:
-                logger.info(f"   {seconds - i}s remaining...")
-            time.sleep(1)
+    def wait_for_processing(self, seconds: int = 5):
+        """Wait for processing (minimal wait since we're calling test endpoint directly)"""
+        logger.info(f"⏳ Waiting {seconds}s for data to propagate...")
+        time.sleep(seconds)
         logger.info("✅ Wait complete")
 
     def get_deals(self, status: str = None) -> list:

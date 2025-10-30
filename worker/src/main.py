@@ -433,6 +433,38 @@ async def process_demo_email(
         logger.error(f"[DEMO] Error processing email: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
 
+@app.post("/test/process-email")
+async def test_process_email(
+    email_text: str = Body(..., embed=True),
+    user_id: str = Body(..., embed=True)
+) -> Dict[str, Any]:
+    """
+    Test endpoint: Process email with specified user_id for E2E testing
+
+    **For testing only** - Bypasses Gmail polling but tests full extraction pipeline
+    **Persists to database** - Unlike /demo endpoint, saves with correct user_id
+
+    Args:
+        email_text: Raw email content (with From, Subject, Body)
+        user_id: User ID to associate extracted data with
+
+    Returns:
+        Processing results with extracted and persisted data
+    """
+    try:
+        logger.info(f"[TEST] Processing email for user: {user_id} (length: {len(email_text)} chars)")
+
+        # Process through LangGraph workflow with user_id
+        result = await workflow.process_email(email_text, source="test", user_id=user_id)
+
+        logger.info(f"[TEST] Processing complete: {result['status']} (user: {user_id})")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"[TEST] Error processing email: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
 @app.get("/stats")
 async def get_processing_stats():
     """Processing statistics - would be pulled from DynamoDB in production"""
