@@ -428,6 +428,11 @@ function AppContent() {
 
   // ONBOARDING ROUTES (no navigation bar)
   if (location.pathname === '/welcome') {
+    // If already authenticated, redirect to dashboard
+    if (isAuthenticated) {
+      navigate('/', { replace: true });
+      return null;
+    }
     return <Welcome />;
   }
   if (location.pathname === '/onboarding/analyzing') {
