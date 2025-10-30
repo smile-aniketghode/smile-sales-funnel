@@ -17,8 +17,8 @@ class DynamoDBCleanup:
 
     def __init__(self, region: str = None, table_prefix: str = None, endpoint_url: Optional[str] = None):
         # Use environment variables if not provided
-        self.region = region or os.getenv("AWS_REGION", "us-east-1")
-        self.table_prefix = table_prefix or os.getenv("TABLE_PREFIX", "smile-sales-funnel-dev")
+        self.region = region if region is not None else os.getenv("AWS_REGION", "us-east-1")
+        self.table_prefix = table_prefix if table_prefix is not None else os.getenv("TABLE_PREFIX", "smile-sales-funnel-dev")
 
         # Support local DynamoDB endpoint
         if endpoint_url is None:
@@ -32,22 +32,22 @@ class DynamoDBCleanup:
             logger.info(f"Cleanup: Using local DynamoDB at {endpoint_url}")
             self.dynamodb = boto3.resource(
                 'dynamodb',
-                region_name=region,
+                region_name=self.region,
                 endpoint_url=endpoint_url,
                 aws_access_key_id='dummy',
                 aws_secret_access_key='dummy'
             )
         else:
-            logger.info(f"Cleanup: Using AWS DynamoDB in region {region}")
-            self.dynamodb = boto3.resource('dynamodb', region_name=region)
+            logger.info(f"Cleanup: Using AWS DynamoDB in region {self.region}")
+            self.dynamodb = boto3.resource('dynamodb', region_name=self.region)
 
         # Table references
         self.tables = {
-            'tasks': self.dynamodb.Table(f"{table_prefix}-tasks"),
-            'deals': self.dynamodb.Table(f"{table_prefix}-deals"),
-            'email_logs': self.dynamodb.Table(f"{table_prefix}-email-logs"),
-            'people': self.dynamodb.Table(f"{table_prefix}-people"),
-            'companies': self.dynamodb.Table(f"{table_prefix}-companies")
+            'tasks': self.dynamodb.Table(f"{self.table_prefix}-tasks"),
+            'deals': self.dynamodb.Table(f"{self.table_prefix}-deals"),
+            'email_logs': self.dynamodb.Table(f"{self.table_prefix}-email-logs"),
+            'people': self.dynamodb.Table(f"{self.table_prefix}-people"),
+            'companies': self.dynamodb.Table(f"{self.table_prefix}-companies")
         }
 
     def delete_task(self, task_id: str) -> bool:
