@@ -196,11 +196,16 @@ export class DynamoDbService {
       const expressionAttributeValues: any = {
         ':updated_at': new Date().toISOString()
       };
+      const expressionAttributeNames: any = {};
 
-      // Build dynamic update expression
+      // Build dynamic update expression with reserved keyword handling
       const updateFields = Object.keys(updates).filter(key => key !== 'id');
-      const updateExpr = updateFields.length > 0 
-        ? updateExpression + ', ' + updateFields.map(field => `${field} = :${field}`).join(', ')
+      const updateExpr = updateFields.length > 0
+        ? updateExpression + ', ' + updateFields.map(field => {
+            // Use ExpressionAttributeNames for reserved keywords
+            expressionAttributeNames[`#${field}`] = field;
+            return `#${field} = :${field}`;
+          }).join(', ')
         : updateExpression;
 
       updateFields.forEach(field => {
@@ -212,6 +217,7 @@ export class DynamoDbService {
         Key: { id: taskId },
         UpdateExpression: updateExpr,
         ExpressionAttributeValues: expressionAttributeValues,
+        ExpressionAttributeNames: expressionAttributeNames,
         ReturnValues: 'UPDATED_NEW'
       });
 
@@ -231,11 +237,16 @@ export class DynamoDbService {
       const expressionAttributeValues: any = {
         ':updated_at': new Date().toISOString()
       };
+      const expressionAttributeNames: any = {};
 
-      // Build dynamic update expression
+      // Build dynamic update expression with reserved keyword handling
       const updateFields = Object.keys(updates).filter(key => key !== 'id');
-      const updateExpr = updateFields.length > 0 
-        ? updateExpression + ', ' + updateFields.map(field => `${field} = :${field}`).join(', ')
+      const updateExpr = updateFields.length > 0
+        ? updateExpression + ', ' + updateFields.map(field => {
+            // Use ExpressionAttributeNames for reserved keywords
+            expressionAttributeNames[`#${field}`] = field;
+            return `#${field} = :${field}`;
+          }).join(', ')
         : updateExpression;
 
       updateFields.forEach(field => {
@@ -247,6 +258,7 @@ export class DynamoDbService {
         Key: { id: dealId },
         UpdateExpression: updateExpr,
         ExpressionAttributeValues: expressionAttributeValues,
+        ExpressionAttributeNames: expressionAttributeNames,
         ReturnValues: 'UPDATED_NEW'
       });
 
