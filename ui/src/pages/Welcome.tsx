@@ -1,12 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+const WORKER_API_BASE = import.meta.env.VITE_WORKER_API_BASE_URL || 'http://localhost:8000';
 
 export const Welcome: React.FC = () => {
   const navigate = useNavigate();
+  const [showEmailInput, setShowEmailInput] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleConnectGmail = () => {
-    // Redirect to login page which handles email input and OAuth flow
-    navigate('/login');
+  const handleConnectGmail = async () => {
+    if (!showEmailInput) {
+      setShowEmailInput(true);
+      return;
+    }
+
+    if (!email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    setIsConnecting(true);
+    setError('');
+
+    try {
+      const authUrl = `${WORKER_API_BASE}/auth/gmail?user_id=${encodeURIComponent(email)}`;
+      const response = await fetch(authUrl);
+      const data = await response.json();
+      window.location.href = data.auth_url;
+    } catch (err) {
+      setError('Failed to connect to authentication server');
+      setIsConnecting(false);
+      console.error('Auth error:', err);
+    }
   };
 
   const handleTryDemo = () => {
@@ -75,15 +108,37 @@ export const Welcome: React.FC = () => {
             </p>
           </div>
 
+          {/* Email input (shown after first click) */}
+          {showEmailInput && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleConnectGmail()}
+                placeholder="you@company.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+              />
+              {error && (
+                <p className="mt-2 text-sm text-red-600">{error}</p>
+              )}
+            </div>
+          )}
+
           {/* Single strong CTA */}
           <button
             onClick={handleConnectGmail}
-            className="w-full mb-6 px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-bold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-xl hover:shadow-2xl hover:scale-105 flex items-center justify-center gap-4 group"
+            disabled={isConnecting}
+            className="w-full mb-6 px-8 py-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-bold rounded-2xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-xl hover:shadow-2xl hover:scale-105 flex items-center justify-center gap-4 group disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg className="w-8 h-8 text-white group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
               <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" />
             </svg>
-            Connect Gmail to Start
+            {isConnecting ? 'Connecting...' : showEmailInput ? 'Connect with Gmail' : 'Connect Gmail to Start'}
           </button>
 
           {/* Trust indicators */}
