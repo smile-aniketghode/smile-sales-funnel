@@ -6,6 +6,7 @@ import { Pipeline } from './pages/Pipeline';
 import { Contacts } from './pages/Contacts';
 import { AIInbox } from './pages/AIInbox';
 import { Settings } from './pages/Settings';
+import { Login } from './pages/Login';
 import { DemoMode } from './pages/DemoMode';
 import { RealDemoMode } from './pages/RealDemoMode';
 import { Welcome } from './pages/Welcome';
@@ -442,9 +443,13 @@ function AppContent() {
     return <OnboardingResults />;
   }
 
-  // Show Welcome page for all unauthenticated users
+  // Show Login or Welcome page for unauthenticated users
   if (!isAuthenticated) {
-    // Always show Welcome page as the first screen
+    // /login is for OAuth callback - show Login page
+    if (location.pathname === '/login') {
+      return <Login />;
+    }
+    // For all other paths, show Welcome as first screen
     return <Welcome />;
   }
 
