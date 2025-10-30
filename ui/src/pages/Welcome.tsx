@@ -7,8 +7,8 @@ export const Welcome: React.FC = () => {
   const navigate = useNavigate();
 
   const handleConnectGmail = () => {
-    // Start OAuth flow
-    window.location.href = `${WORKER_API_BASE}/auth/gmail`;
+    // Redirect to login page which handles email input and OAuth flow
+    navigate('/login');
   };
 
   const handleTryDemo = () => {
