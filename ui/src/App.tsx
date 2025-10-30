@@ -386,6 +386,11 @@ function AppContent() {
 
   // Onboarding guard - check if user needs onboarding
   useEffect(() => {
+    // Skip if user is authenticated (they've already completed onboarding)
+    if (isAuthenticated) {
+      return;
+    }
+
     const onboardingPaths = ['/welcome', '/onboarding/analyzing', '/onboarding/results'];
     const isOnboardingPath = onboardingPaths.some(path => location.pathname.startsWith(path));
 
@@ -403,7 +408,7 @@ function AppContent() {
       console.log('🎯 User needs onboarding, redirecting to:', onboardingState.redirectTo);
       navigate(onboardingState.redirectTo, { replace: true });
     }
-  }, [location.pathname, navigate]);
+  }, [location.pathname, navigate, isAuthenticated]);
 
   // Redirect authenticated users away from login page
   useEffect(() => {
