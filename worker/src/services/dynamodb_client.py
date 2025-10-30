@@ -15,9 +15,10 @@ logger = logging.getLogger(__name__)
 class DynamoDBClient:
     """DynamoDB client for persisting extracted data (supports local and AWS)"""
 
-    def __init__(self, region: str = "us-east-1", table_prefix: str = "smile-sales-funnel-dev", endpoint_url: Optional[str] = None):
-        self.region = region
-        self.table_prefix = table_prefix
+    def __init__(self, region: str = None, table_prefix: str = None, endpoint_url: Optional[str] = None):
+        # Use environment variables if not provided
+        self.region = region or os.getenv("AWS_REGION", "us-east-1")
+        self.table_prefix = table_prefix or os.getenv("TABLE_PREFIX", "smile-sales-funnel-dev")
 
         # Support local DynamoDB endpoint
         if endpoint_url is None:
