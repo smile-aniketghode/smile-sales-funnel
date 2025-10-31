@@ -86,15 +86,26 @@ class GmailClient:
 
             query = " ".join(query_parts) if query_parts else ""
 
-            # List messages
+            # List messages with pagination
             logger.info(f"Fetching emails for {user_id} with query: {query}")
-            results = service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            messages = []
+            page_token = None
 
-            messages = results.get('messages', [])
+            while len(messages) < max_results:
+                results = service.users().messages().list(
+                    userId='me',
+                    q=query,
+                    maxResults=min(500, max_results - len(messages)),
+                    pageToken=page_token
+                ).execute()
+
+                page_messages = results.get('messages', [])
+                messages.extend(page_messages)
+
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
+
             logger.info(f"Found {len(messages)} messages")
 
             emails = []
