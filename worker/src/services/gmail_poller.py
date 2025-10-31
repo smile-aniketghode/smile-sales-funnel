@@ -107,11 +107,10 @@ class GmailPoller:
             if not label_ids:
                 label_ids = ["INBOX"]
 
-            # Get last sync time (or default to 7 days ago for first-time users)
+            # Get last sync time (or default to 24 hours ago)
             last_sync = self.last_sync.get(user_id)
             if not last_sync:
-                # First-time sync: fetch last 7 days of emails
-                last_sync = datetime.utcnow() - timedelta(days=7)
+                last_sync = datetime.utcnow() - timedelta(hours=24)
 
             logger.info(f"📧 Polling {user_id} (labels: {label_ids}, since: {last_sync.isoformat()})")
 
