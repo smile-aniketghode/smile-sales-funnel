@@ -201,8 +201,8 @@ export const Pipeline: React.FC = () => {
         )}
 
         {/* Kanban Board - full width with horizontal scroll */}
-        <div className="overflow-x-auto px-6 pb-4">
-          <div className="flex gap-4 min-w-min">
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 px-6">
           {PIPELINE_STAGES.map((stage) => {
             const stageDeals = dealsByStage[stage.id] || [];
             const stageValue = getStageValue(stage.id);
@@ -319,7 +319,7 @@ const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, for
   return (
     <div
       ref={setNodeRef}
-      className="bg-gray-50 rounded-lg border border-gray-200 flex-shrink-0 w-80"
+      className="bg-gray-50 rounded-lg border border-gray-200 flex-1 min-w-[280px]"
     >
       {/* Column Header */}
       <div className={`${stage.color} p-4 rounded-t-lg border-b border-gray-200`}>
