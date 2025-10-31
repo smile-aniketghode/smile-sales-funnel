@@ -2,7 +2,7 @@ import time
 import email
 import hashlib
 from datetime import datetime
-from typing import Dict, Any, Literal
+from typing import Dict, Any, Literal, List
 import logging
 
 from langgraph.graph import StateGraph, END
@@ -308,4 +308,123 @@ class EmailProcessingWorkflow:
                     "business_score": 0.0
                 }
             }
+
+    async def process_emails_batch(
+        self,
+        emails_mime_content: List[str],
+        source: str = "gmail",
+        user_id: str = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Process multiple emails in batch using LangChain's abatch for LLM calls
+
+        Args:
+            emails_mime_content: List of MIME email contents
+            source: Source identifier
+            user_id: User/Gmail account
+
+        Returns:
+            List of processing results for each email
+        """
+        logger.info(f"🔄 Processing batch of {len(emails_mime_content)} emails")
+
+        # Parse all emails first
+        parsed_emails = []
+        for idx, mime_content in enumerate(emails_mime_content):
+            try:
+                email_msg = email.message_from_string(mime_content)
+                from_header = email_msg.get('From', '')
+                sender_email = extract_email_address(from_header)
+                sender_name = extract_sender_name(from_header)
+                subject = email_msg.get('Subject', 'No subject')
+                message_id = email_msg.get('Message-ID', f'unknown-{int(time.time())}')
+                content = extract_text_content(email_msg)
+                message_hash = EmailLog.generate_message_hash(message_id, content)
+
+                parsed_emails.append({
+                    'idx': idx,
+                    'email_msg': email_msg,
+                    'sender_email': sender_email,
+                    'sender_name': sender_name,
+                    'subject': subject,
+                    'message_id': message_id,
+                    'content': content,
+                    'message_hash': message_hash,
+                    'mime_content': mime_content
+                })
+            except Exception as e:
+                logger.error(f"Failed to parse email {idx}: {e}")
+                parsed_emails.append({'idx': idx, 'error': str(e)})
+
+        # Batch classify all emails using LangChain abatch
+        logger.info(f"📊 Batch classifying {len(parsed_emails)} emails")
+        classification_inputs = []
+        valid_emails = []
+
+        for parsed in parsed_emails:
+            if 'error' not in parsed:
+                classification_inputs.append({
+                    'sender_email': parsed['sender_email'],
+                    'subject': parsed['subject'],
+                    'content': parsed['content'][:1000]
+                })
+                valid_emails.append(parsed)
+
+        # Batch classify using abatch
+        if classification_inputs:
+            classifications = await self.classify_node.chain.abatch(classification_inputs)
+        else:
+            classifications = []
+
+        # Filter to sales leads only
+        sales_emails = []
+        results = [None] * len(emails_mime_content)
+
+        for parsed, classification in zip(valid_emails, classifications):
+            idx = parsed['idx']
+            if classification.category == 'sales_lead':
+                sales_emails.append(parsed)
+                logger.info(
+                    f"✅ Sales lead | From: {parsed['sender_email']} | Subject: {parsed['subject'][:50]}"
+                )
+            else:
+                logger.info(
+                    f"⏭️  Skipped ({classification.category}) | From: {parsed['sender_email']} | Subject: {parsed['subject'][:50]}"
+                )
+                results[idx] = {
+                    'status': 'skipped',
+                    'reason': classification.category,
+                    'message_id': parsed['message_id'],
+                    'results': {'tasks_created': 0, 'deals_created': 0}
+                }
+
+        # Process sales emails through full workflow
+        logger.info(f"🎯 Processing {len(sales_emails)} sales emails")
+        for sales_email in sales_emails:
+            try:
+                result = await self.process_email(
+                    sales_email['mime_content'],
+                    source=source,
+                    user_id=user_id
+                )
+                results[sales_email['idx']] = result
+            except Exception as e:
+                logger.error(f"Failed to process sales email {sales_email['idx']}: {e}")
+                results[sales_email['idx']] = {
+                    'status': 'error',
+                    'message': str(e),
+                    'results': {'tasks_created': 0, 'deals_created': 0}
+                }
+
+        # Fill in any errors from parsing
+        for parsed in parsed_emails:
+            if 'error' in parsed and results[parsed['idx']] is None:
+                results[parsed['idx']] = {
+                    'status': 'error',
+                    'message': parsed['error'],
+                    'results': {'tasks_created': 0, 'deals_created': 0}
+                }
+
+        logger.info(f"✅ Batch complete: {len(sales_emails)} sales leads processed")
+        return results
     

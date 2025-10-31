@@ -20,6 +20,11 @@ class EmailProcessingState(TypedDict):
     start_time: float
     processing_time_ms: int
     
+    # Classification results
+    email_category: Optional[str]  # sales_lead, internal_operations, spam_noise, customer_support
+    classification_confidence: Optional[float]
+    classification_reasoning: Optional[str]
+
     # Prefilter results
     prefilter_result: PrefilterResult
     filtered_content: str

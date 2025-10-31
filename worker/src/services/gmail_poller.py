@@ -164,31 +164,37 @@ class GmailPoller:
                 batch_num = (i // self.batch_size) + 1
                 total_batches = (len(emails) + self.batch_size - 1) // self.batch_size
 
-                logger.info(f"  Processing batch {batch_num}/{total_batches} ({len(batch)} emails)")
+                logger.info(f"  Processing batch {batch_num}/{total_batches} ({len(batch)} emails) using LangChain abatch")
 
-                # Process batch through workflow - workflow will use LangChain abatch() internally
-                for email_data in batch:
-                    try:
-                        result = await self.workflow.process_email(
-                            email_data['mime_content'],
-                            source="gmail",
-                            user_id=user_id
-                        )
+                # Prepare batch for workflow
+                batch_mime_contents = [email_data['mime_content'] for email_data in batch]
 
-                        if result['status'] == 'success':
+                # Process entire batch with LangChain abatch for classification
+                try:
+                    batch_results = await self.workflow.process_emails_batch(
+                        batch_mime_contents,
+                        source="gmail",
+                        user_id=user_id
+                    )
+
+                    # Aggregate results
+                    for email_data, result in zip(batch, batch_results):
+                        if result and result.get('status') == 'success':
                             results['emails_processed'] += 1
-                            # Tasks/deals counts are nested in 'results' dict
                             result_data = result.get('results', {})
                             results['tasks_extracted'] += result_data.get('tasks_created', 0)
                             results['deals_extracted'] += result_data.get('deals_created', 0)
+                        elif result and result.get('status') == 'skipped':
+                            results['emails_processed'] += 1  # Count as processed (classified and skipped)
                         else:
                             results['errors'].append({
-                                "email_id": email_data['gmail_id'],
-                                "error": result.get('error', 'Unknown error')
+                                "email_id": email_data.get('gmail_id'),
+                                "error": result.get('message', 'Unknown error') if result else 'No result'
                             })
 
-                    except Exception as e:
-                        logger.error(f"  Failed to process email {email_data.get('gmail_id')}: {e}")
+                except Exception as e:
+                    logger.error(f"  Failed to process batch: {e}", exc_info=True)
+                    for email_data in batch:
                         results['errors'].append({
                             "email_id": email_data.get('gmail_id'),
                             "error": str(e)
