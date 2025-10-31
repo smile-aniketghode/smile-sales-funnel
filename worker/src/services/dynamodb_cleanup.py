@@ -83,7 +83,7 @@ class DynamoDBCleanup:
     def delete_email_log(self, message_hash: str) -> bool:
         """Delete a single email log by message hash"""
         try:
-            self.tables['email_logs'].delete_item(Key={'message_hash': message_hash})
+            self.tables['email_logs'].delete_item(Key={'message_id_hash': message_hash})
             logger.info(f"✅ Deleted email log: {message_hash[:16]}...")
             return True
         except Exception as e:
