@@ -154,8 +154,13 @@ class GmailPoller:
                 "errors": []
             }
 
-            for email_data in emails:
+            for idx, email_data in enumerate(emails):
                 try:
+                    # Add delay between emails to avoid rate limiting (except for first email)
+                    # OpenRouter free tier: 16 req/min = ~4 sec/email to be safe
+                    if idx > 0:
+                        await asyncio.sleep(4)
+
                     # Process through LangGraph workflow
                     result = await self.workflow.process_email(
                         email_data['mime_content'],
