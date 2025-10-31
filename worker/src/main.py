@@ -171,6 +171,13 @@ async def gmail_auth_callback(
 
         logger.info(f"Gmail OAuth completed for: {user_email} (user_id: {user_id})")
 
+        # Trigger immediate polling for this user (don't wait for background loop)
+        try:
+            asyncio.create_task(gmail_poller.poll_user(user_id))
+            logger.info(f"Triggered immediate polling for {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to trigger immediate poll: {e}")
+
         # Redirect to success page in UI
         ui_base_url = os.getenv("UI_BASE_URL", "http://localhost:5173")
         return RedirectResponse(
