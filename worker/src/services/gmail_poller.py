@@ -107,20 +107,27 @@ class GmailPoller:
             if not label_ids:
                 label_ids = ["INBOX"]
 
-            # Get last sync time (or default to 24 hours ago)
+            # Get last sync time
             last_sync = self.last_sync.get(user_id)
+
+            # For first connection, fetch recent emails without date filter
+            # For subsequent polls, use timestamp to get only new emails
             if not last_sync:
-                last_sync = datetime.utcnow() - timedelta(hours=24)
-
-            logger.info(f"📧 Polling {user_id} (labels: {label_ids}, since: {last_sync.isoformat()})")
-
-            # Fetch new emails since last sync
-            emails = self.gmail_client.fetch_emails_by_label(
-                user_id=user_id,
-                label_ids=label_ids,
-                max_results=self.max_emails_per_poll,
-                after_date=last_sync
-            )
+                logger.info(f"📧 First sync for {user_id} (labels: {label_ids}), fetching recent emails")
+                emails = self.gmail_client.fetch_emails_by_label(
+                    user_id=user_id,
+                    label_ids=label_ids,
+                    max_results=100,  # Fetch more emails on first sync
+                    after_date=None  # No date filter on first sync
+                )
+            else:
+                logger.info(f"📧 Polling {user_id} (labels: {label_ids}, since: {last_sync.isoformat()})")
+                emails = self.gmail_client.fetch_emails_by_label(
+                    user_id=user_id,
+                    label_ids=label_ids,
+                    max_results=100,  # Fetch all new emails since last sync
+                    after_date=last_sync
+                )
 
             if not emails:
                 logger.info(f"  No new emails for {user_id}")
