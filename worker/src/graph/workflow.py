@@ -10,11 +10,12 @@ from langgraph.graph import StateGraph, END
 from .state import EmailProcessingState
 from .nodes import (
     PreFilterNode,
-    ExtractLocalNode, 
+    ExtractLocalNode,
     ConfidenceGateNode,
     PersistNode,
     EmitEventNode
 )
+from .nodes.classify_email import ClassifyEmailNode
 from ..models import EmailLog, PrefilterResult, ProcessingStatus
 from ..utils import extract_text_content, extract_email_address, extract_sender_name
 
@@ -39,6 +40,7 @@ class EmailProcessingWorkflow:
         self.confidence_threshold = confidence_threshold
         
         # Initialize nodes
+        self.classify_node = ClassifyEmailNode()
         self.prefilter_node = PreFilterNode()
         # ExtractLocalNode auto-detects provider, model from env vars
         self.extract_node = ExtractLocalNode()
@@ -69,15 +71,26 @@ class EmailProcessingWorkflow:
         workflow = StateGraph(EmailProcessingState)
         
         # Add nodes
+        workflow.add_node("classify", self.classify_node)
         workflow.add_node("prefilter", self.prefilter_node)
         workflow.add_node("extract_local", self.extract_node)
         workflow.add_node("confidence_gate", self.confidence_gate_node)
         workflow.add_node("persist", self.persist_node)
         workflow.add_node("emit_event", self.emit_event_node)
-        
+
         # Define the flow
-        workflow.set_entry_point("prefilter")
-        
+        workflow.set_entry_point("classify")
+
+        # Conditional routing after classification
+        workflow.add_conditional_edges(
+            "classify",
+            self._should_continue_after_classification,
+            {
+                "sales_lead": "prefilter",
+                "skip": "emit_event"
+            }
+        )
+
         # Conditional routing after prefilter
         workflow.add_conditional_edges(
             "prefilter",
@@ -95,7 +108,20 @@ class EmailProcessingWorkflow:
         workflow.add_edge("emit_event", END)
         
         return workflow
-    
+
+    def _should_continue_after_classification(
+        self,
+        state: EmailProcessingState
+    ) -> Literal["sales_lead", "skip"]:
+        """Determine whether to continue processing after classification"""
+        email_category = state.get("email_category")
+
+        # Only process sales leads
+        if email_category == "sales_lead":
+            return "sales_lead"
+
+        return "skip"
+
     def _should_continue_after_prefilter(
         self, 
         state: EmailProcessingState
@@ -146,7 +172,12 @@ class EmailProcessingWorkflow:
             # Check if email was already processed (idempotency)
             existing_log = await self.db_client.get_email_log(message_hash)
             if existing_log:
-                logger.info(f"Email already processed (hash: {message_hash[:16]}...), skipping")
+                logger.info(
+                    f"⏭️  Email already processed | "
+                    f"From: {sender_email} | "
+                    f"Subject: {subject[:50]}... | "
+                    f"Hash: {message_hash[:16]}..."
+                )
                 return {
                     "status": "skipped",
                     "reason": "already_processed",
@@ -196,7 +227,12 @@ class EmailProcessingWorkflow:
                 "events_to_emit": []
             }
             
-            logger.info(f"Starting email processing workflow for: {message_id}")
+            logger.info(
+                f"🔄 Starting workflow | "
+                f"From: {sender_email} | "
+                f"Subject: {subject[:60]}... | "
+                f"ID: {message_id[:30]}..."
+            )
             
             # Execute the workflow
             final_state = await self.app.ainvoke(initial_state)
@@ -222,10 +258,11 @@ class EmailProcessingWorkflow:
                     logger.error(f"Failed to save email log: {e}")
 
             logger.info(
-                f"Workflow complete in {processing_time}ms. "
-                f"Status: {final_state.get('status')}, "
-                f"Tasks: {len(final_state.get('tasks_saved', []))}, "
-                f"Deals: {len(final_state.get('deals_saved', []))}"
+                f"✅ Workflow complete ({processing_time}ms) | "
+                f"Status: {final_state.get('status')} | "
+                f"Tasks: {len(final_state.get('tasks_saved', []))}, Deals: {len(final_state.get('deals_saved', []))} | "
+                f"From: {sender_email} | "
+                f"Subject: {subject[:50]}..."
             )
             
             # Return summary results
@@ -250,7 +287,13 @@ class EmailProcessingWorkflow:
             
         except Exception as e:
             processing_time = int((time.time() - start_time) * 1000)
-            logger.error(f"Workflow failed after {processing_time}ms: {str(e)}")
+            logger.error(
+                f"❌ Workflow failed ({processing_time}ms) | "
+                f"Error: {str(e)} | "
+                f"From: {sender_email} | "
+                f"Subject: {subject[:50]}...",
+                exc_info=True
+            )
             
             return {
                 "status": "error",

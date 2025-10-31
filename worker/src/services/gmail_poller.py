@@ -5,6 +5,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 import os
+from zoneinfo import ZoneInfo
 
 from .gmail_client import GmailClient
 from .gmail_token_storage import GmailTokenStorage
@@ -111,17 +112,19 @@ class GmailPoller:
             # Get last sync time
             last_sync = self.last_sync.get(user_id)
 
-            # For first connection, fetch all emails from today (00:00 AM UTC)
+            # For first connection, fetch all emails from today (00:00 AM IST)
             # For subsequent polls, use timestamp to get only new emails
             if not last_sync:
-                # First sync: get all emails from today's midnight
-                today_midnight = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-                logger.info(f"📧 First sync for {user_id} (labels: {label_ids}), fetching emails since today 00:00 UTC")
+                # First sync: get all emails from today's midnight IST
+                ist = ZoneInfo("Asia/Kolkata")
+                now_ist = datetime.now(ist)
+                today_midnight_ist = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+                logger.info(f"📧 First sync for {user_id} (labels: {label_ids}), fetching emails since today 00:00 IST")
                 emails = self.gmail_client.fetch_emails_by_label(
                     user_id=user_id,
                     label_ids=label_ids,
                     max_results=self.max_emails_per_poll,
-                    after_date=today_midnight
+                    after_date=today_midnight_ist
                 )
             else:
                 logger.info(f"📧 Polling {user_id} (labels: {label_ids}, since: {last_sync.isoformat()})")
@@ -192,8 +195,9 @@ class GmailPoller:
                             "error": str(e)
                         })
 
-            # Update last sync time
-            self.last_sync[user_id] = datetime.utcnow()
+            # Update last sync time (IST)
+            ist = ZoneInfo("Asia/Kolkata")
+            self.last_sync[user_id] = datetime.now(ist)
 
             logger.info(
                 f"  ✅ Processed {results['emails_processed']}/{results['emails_fetched']} emails "

@@ -59,7 +59,11 @@ class PersistNode:
                         TaskStatus.ACCEPTED  # Auto-accept high confidence
                     )
                     created_tasks.append(task)
-                    logger.info(f"Created auto-accepted task: {task.title}")
+                    logger.info(
+                        f"Created auto-accepted task: {task.title} | "
+                        f"From: {state.get('sender_email', 'unknown')} | "
+                        f"Subject: {state.get('subject', 'unknown')[:50]}"
+                    )
                 except Exception as e:
                     logger.error(f"Error creating high-confidence task: {e}")
                     continue
@@ -76,7 +80,11 @@ class PersistNode:
                         TaskStatus.DRAFT  # Requires human review
                     )
                     created_tasks.append(task)
-                    logger.info(f"Created draft task: {task.title}")
+                    logger.info(
+                        f"Created draft task: {task.title} | "
+                        f"From: {state.get('sender_email', 'unknown')} | "
+                        f"Subject: {state.get('subject', 'unknown')[:50]}"
+                    )
                 except Exception as e:
                     logger.error(f"Error creating draft task: {e}")
                     continue
@@ -93,7 +101,11 @@ class PersistNode:
                         DealStatus.ACCEPTED  # Auto-accept high confidence
                     )
                     created_deals.append(deal)
-                    logger.info(f"Created auto-accepted deal: {deal.title}")
+                    logger.info(
+                        f"Created auto-accepted deal: {deal.title} | "
+                        f"From: {state.get('sender_email', 'unknown')} | "
+                        f"Subject: {state.get('subject', 'unknown')[:50]}"
+                    )
                 except Exception as e:
                     logger.error(f"Error creating high-confidence deal: {e}")
                     continue
@@ -110,7 +122,11 @@ class PersistNode:
                         DealStatus.DRAFT  # Requires human review
                     )
                     created_deals.append(deal)
-                    logger.info(f"Created draft deal: {deal.title}")
+                    logger.info(
+                        f"Created draft deal: {deal.title} | "
+                        f"From: {state.get('sender_email', 'unknown')} | "
+                        f"Subject: {state.get('subject', 'unknown')[:50]}"
+                    )
                 except Exception as e:
                     logger.error(f"Error creating draft deal: {e}")
                     continue
@@ -124,7 +140,11 @@ class PersistNode:
                         sender_name=state.get("sender_name"),
                         user_id=state["user_id"]
                     )
-                    logger.info(f"Created qualified contact: {created_person.get_display_name()} ({created_person.email})")
+                    logger.info(
+                        f"✅ Created qualified contact: {created_person.get_display_name()} ({created_person.email}) | "
+                        f"Tasks: {len(created_tasks)}, Deals: {len(created_deals)} | "
+                        f"Subject: {state.get('subject', 'unknown')[:50]}"
+                    )
                 except Exception as e:
                     logger.error(f"Error creating person entity: {e}")
 
@@ -155,10 +175,10 @@ class PersistNode:
                 people_saved = save_result.get("people_ids", [])
 
                 logger.info(
-                    f"Persistence complete. "
-                    f"Tasks saved: {len(tasks_saved)}, "
-                    f"Deals saved: {len(deals_saved)}, "
-                    f"People saved: {len(people_saved)}"
+                    f"📊 Persistence complete | "
+                    f"Tasks: {len(tasks_saved)}, Deals: {len(deals_saved)}, Contacts: {len(people_saved)} | "
+                    f"From: {state.get('sender_email', 'unknown')} | "
+                    f"Subject: {state.get('subject', 'unknown')[:50]}"
                 )
             
             return {
