@@ -118,8 +118,9 @@ class ExtractLocalNode:
                 for task_raw in result.get("tasks", []):
                     # Convert simplified format to full task format
                     # Extract title and description from available fields
-                    title = task_raw.get("title", task_raw.get("text", task_raw.get("snippet", "Unknown task")))
-                    description = task_raw.get("description", task_raw.get("snippet", task_raw.get("text", title)))
+                    # LLM returns 'task' field, use that as title if available
+                    title = task_raw.get("task", task_raw.get("title", task_raw.get("text", task_raw.get("snippet", "Unknown task"))))
+                    description = task_raw.get("snippet", task_raw.get("description", task_raw.get("text", title)))
 
                     task_data = {
                         "title": title,
