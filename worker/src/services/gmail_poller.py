@@ -166,8 +166,7 @@ class GmailPoller:
 
                 logger.info(f"  Processing batch {batch_num}/{total_batches} ({len(batch)} emails)")
 
-                # Process each email in the batch through workflow
-                # Note: The workflow itself will use batch LLM extraction via abatch
+                # Process batch through workflow - workflow will use LangChain abatch() internally
                 for email_data in batch:
                     try:
                         result = await self.workflow.process_email(
