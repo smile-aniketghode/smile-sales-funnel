@@ -363,7 +363,7 @@ const DraggableDealCard: React.FC<DraggableDealCardProps> = ({ deal, onClick }) 
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     if (!isDragging) {
       onClick(deal);
     }
