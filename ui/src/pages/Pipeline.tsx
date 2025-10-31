@@ -31,6 +31,7 @@ const PIPELINE_STAGES = [
 export const Pipeline: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeDeal, setActiveDeal] = React.useState<Deal | null>(null);
+  const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);
 
   // Fetch all deals
   const { data: dealsData, isLoading, isError } = useQuery({
@@ -164,7 +165,7 @@ export const Pipeline: React.FC = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="max-w-[1600px] mx-auto px-4 py-8">
+      <div className="w-full px-6 py-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline</h1>
@@ -176,7 +177,7 @@ export const Pipeline: React.FC = () => {
 
         {/* Empty Pipeline Banner */}
         {allDeals.length === 0 && (
-          <div className="mb-6 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6">
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6 max-w-3xl">
             <div className="flex items-start gap-4">
               <div className="text-4xl">🎯</div>
               <div className="flex-1">
@@ -197,8 +198,9 @@ export const Pipeline: React.FC = () => {
           </div>
         )}
 
-        {/* Kanban Board - 6 columns */}
-        <div className="grid grid-cols-6 gap-4 pb-4">
+        {/* Kanban Board - horizontal scroll */}
+        <div className="overflow-x-auto pb-4">
+          <div className="flex gap-4 min-w-min">
           {PIPELINE_STAGES.map((stage) => {
             const stageDeals = dealsByStage[stage.id] || [];
             const stageValue = getStageValue(stage.id);
@@ -210,9 +212,11 @@ export const Pipeline: React.FC = () => {
                 deals={stageDeals}
                 stageValue={stageValue}
                 formatCurrency={formatIndianCurrency}
+                onDealClick={setSelectedDeal}
               />
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -220,6 +224,77 @@ export const Pipeline: React.FC = () => {
       <DragOverlay>
         {activeDeal ? <DealKanbanCard deal={activeDeal} /> : null}
       </DragOverlay>
+
+      {/* Deal Preview Modal */}
+      {selectedDeal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedDeal(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="border-b border-gray-200 p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedDeal.title}</h2>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      selectedDeal.stage === DealStage.CLOSED_WON ? 'bg-green-100 text-green-800' :
+                      selectedDeal.stage === DealStage.NEGOTIATION ? 'bg-orange-100 text-orange-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {PIPELINE_STAGES.find(s => s.id === selectedDeal.stage)?.label}
+                    </span>
+                    <span className="text-gray-600">{selectedDeal.probability}% probability</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedDeal(null)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Deal Value */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-1">Deal Value</h3>
+                <p className="text-3xl font-bold text-gray-900">{formatIndianCurrency(selectedDeal.value || 0)}</p>
+              </div>
+
+              {/* Description */}
+              {selectedDeal.description && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
+                  <p className="text-gray-700 leading-relaxed">{selectedDeal.description}</p>
+                </div>
+              )}
+
+              {/* Email Snippet */}
+              {selectedDeal.audit_snippet && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">From Email</h3>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-700 italic">"{selectedDeal.audit_snippet}"</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <h3 className="text-xs font-medium text-gray-500 mb-1">AI Agent</h3>
+                  <p className="text-sm text-gray-900">{selectedDeal.agent || 'qwen2.5-coder'}</p>
+                </div>
+                <div>
+                  <h3 className="text-xs font-medium text-gray-500 mb-1">Confidence</h3>
+                  <p className="text-sm text-gray-900">{Math.round((selectedDeal.confidence || 0) * 100)}%</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DndContext>
   );
 };
@@ -230,9 +305,10 @@ interface StageColumnProps {
   deals: Deal[];
   stageValue: number;
   formatCurrency: (value: number) => string;
+  onDealClick: (deal: Deal) => void;
 }
 
-const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, formatCurrency }) => {
+const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, formatCurrency, onDealClick }) => {
   const { setNodeRef } = useSortable({
     id: stage.id,
     data: { type: 'stage' },
@@ -241,7 +317,7 @@ const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, for
   return (
     <div
       ref={setNodeRef}
-      className="bg-gray-50 rounded-lg border border-gray-200"
+      className="bg-gray-50 rounded-lg border border-gray-200 flex-shrink-0 w-80"
     >
       {/* Column Header */}
       <div className={`${stage.color} p-4 rounded-t-lg border-b border-gray-200`}>
@@ -262,7 +338,7 @@ const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, for
               <p className="text-sm">No deals</p>
             </div>
           ) : (
-            deals.map((deal) => <DraggableDealCard key={deal.id} deal={deal} />)
+            deals.map((deal) => <DraggableDealCard key={deal.id} deal={deal} onClick={onDealClick} />)
           )}
         </div>
       </SortableContext>
@@ -273,9 +349,10 @@ const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, for
 // Draggable Deal Card Wrapper
 interface DraggableDealCardProps {
   deal: Deal;
+  onClick: (deal: Deal) => void;
 }
 
-const DraggableDealCard: React.FC<DraggableDealCardProps> = ({ deal }) => {
+const DraggableDealCard: React.FC<DraggableDealCardProps> = ({ deal, onClick }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: deal.id,
   });
@@ -286,8 +363,21 @@ const DraggableDealCard: React.FC<DraggableDealCardProps> = ({ deal }) => {
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (!isDragging) {
+      onClick(deal);
+    }
+  };
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={handleClick}
+      className="cursor-pointer"
+    >
       <DealKanbanCard deal={deal} />
     </div>
   );
