@@ -248,6 +248,11 @@ async def gmail_auth_disconnect(user_id: str = Query(...)):
         token_deleted = token_storage.delete_token(user_id)
         logger.info(f"Token deletion result: {token_deleted}")
 
+        # Clear last_sync timestamp from poller to force fresh sync on reconnect
+        if user_id in gmail_poller.last_sync:
+            del gmail_poller.last_sync[user_id]
+            logger.info(f"Cleared last_sync timestamp for user: {user_id}")
+
         # Clean up all user data INCLUDING email-logs
         # This allows re-processing emails if user reconnects
         cleanup = DynamoDBCleanup()
