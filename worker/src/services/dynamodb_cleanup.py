@@ -169,13 +169,42 @@ class DynamoDBCleanup:
             logger.error(f"❌ Failed to delete contacts for user {user_id}: {e}")
             return {'deleted': 0, 'total': 0, 'success': False, 'error': str(e)}
 
-    def cleanup_all_user_data(self, user_id: str) -> Dict[str, Any]:
+    def delete_email_logs_by_user(self, user_id: str) -> Dict[str, Any]:
+        """Delete all email logs for a user (uses scan - no GSI required)"""
+        try:
+            # Use scan with filter since email-logs table doesn't have user_id GSI
+            response = self.tables['email_logs'].scan(
+                FilterExpression='user_id = :uid',
+                ExpressionAttributeValues={':uid': user_id}
+            )
+
+            items = response.get('Items', [])
+            deleted_count = 0
+
+            for item in items:
+                if self.delete_email_log(item['message_id_hash']):
+                    deleted_count += 1
+
+            logger.info(f"✅ Deleted {deleted_count} email logs for user: {user_id}")
+            return {
+                'deleted': deleted_count,
+                'total': len(items),
+                'success': deleted_count == len(items)
+            }
+        except Exception as e:
+            logger.error(f"❌ Failed to delete email logs for user {user_id}: {e}")
+            return {'deleted': 0, 'total': 0, 'success': False, 'error': str(e)}
+
+    def cleanup_all_user_data(self, user_id: str, include_email_logs: bool = False) -> Dict[str, Any]:
         """
         Complete cleanup: delete all tasks, deals, and contacts for a user
 
-        NOTE: Does NOT delete email-logs to preserve idempotency records
+        Args:
+            user_id: User identifier
+            include_email_logs: If True, also delete email-logs (for disconnect).
+                              If False, preserve email-logs for idempotency (for testing)
         """
-        logger.info(f"🧹 Starting complete cleanup for user: {user_id}")
+        logger.info(f"🧹 Starting complete cleanup for user: {user_id} (include_email_logs: {include_email_logs})")
 
         results = {
             'user_id': user_id,
@@ -184,17 +213,25 @@ class DynamoDBCleanup:
             'people': self.delete_people_by_user(user_id)
         }
 
+        if include_email_logs:
+            results['email_logs'] = self.delete_email_logs_by_user(user_id)
+
         total_deleted = (
             results['tasks'].get('deleted', 0) +
             results['deals'].get('deleted', 0) +
-            results['people'].get('deleted', 0)
+            results['people'].get('deleted', 0) +
+            results.get('email_logs', {}).get('deleted', 0)
         )
 
         logger.info(f"✅ Cleanup complete. Total items deleted: {total_deleted}")
 
         # Check success for each component (handle errors gracefully)
         all_success = True
-        for key in ['tasks', 'deals', 'people']:
+        check_keys = ['tasks', 'deals', 'people']
+        if include_email_logs:
+            check_keys.append('email_logs')
+
+        for key in check_keys:
             if isinstance(results[key], dict):
                 all_success = all_success and results[key].get('success', False)
             else:
