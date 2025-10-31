@@ -165,9 +165,9 @@ export const Pipeline: React.FC = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="w-full px-6 py-8">
-        {/* Header */}
-        <div className="mb-6">
+      <div className="w-full">
+        {/* Header with padding */}
+        <div className="px-6 py-8 pb-4">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Pipeline</h1>
           <p className="text-gray-600">
             {allDeals.length} {allDeals.length === 1 ? 'deal' : 'deals'} • Total value:{' '}
@@ -177,29 +177,31 @@ export const Pipeline: React.FC = () => {
 
         {/* Empty Pipeline Banner */}
         {allDeals.length === 0 && (
-          <div className="mb-6 bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6 max-w-3xl">
-            <div className="flex items-start gap-4">
-              <div className="text-4xl">🎯</div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  No deals in your pipeline yet
-                </h3>
-                <p className="text-gray-700 mb-3">
-                  Your emails don't contain deal opportunities yet. Want to see how the pipeline works?
-                </p>
-                <a
-                  href="/demo"
-                  className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
-                >
-                  🎬 Try Demo Mode
-                </a>
+          <div className="px-6 mb-6">
+            <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6 max-w-3xl">
+              <div className="flex items-start gap-4">
+                <div className="text-4xl">🎯</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No deals in your pipeline yet
+                  </h3>
+                  <p className="text-gray-700 mb-3">
+                    Your emails don't contain deal opportunities yet. Want to see how the pipeline works?
+                  </p>
+                  <a
+                    href="/demo"
+                    className="inline-block px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg"
+                  >
+                    🎬 Try Demo Mode
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Kanban Board - horizontal scroll */}
-        <div className="overflow-x-auto pb-4">
+        {/* Kanban Board - full width with horizontal scroll */}
+        <div className="overflow-x-auto px-6 pb-4">
           <div className="flex gap-4 min-w-min">
           {PIPELINE_STAGES.map((stage) => {
             const stageDeals = dealsByStage[stage.id] || [];
