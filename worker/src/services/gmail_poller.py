@@ -175,8 +175,10 @@ class GmailPoller:
 
                         if result['status'] == 'success':
                             results['emails_processed'] += 1
-                            results['tasks_extracted'] += result.get('tasks_created', 0)
-                            results['deals_extracted'] += result.get('deals_created', 0)
+                            # Tasks/deals counts are nested in 'results' dict
+                            result_data = result.get('results', {})
+                            results['tasks_extracted'] += result_data.get('tasks_created', 0)
+                            results['deals_extracted'] += result_data.get('deals_created', 0)
                         else:
                             results['errors'].append({
                                 "email_id": email_data['gmail_id'],
