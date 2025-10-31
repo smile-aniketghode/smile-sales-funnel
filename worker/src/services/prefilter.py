@@ -26,7 +26,9 @@ class PrefilterService:
         'meeting', 'call', 'schedule', 'follow up', 'followup',
         'project', 'requirements', 'budget', 'timeline', 'deadline',
         'client', 'customer', 'vendor', 'supplier', 'service',
-        'purchase', 'order', 'invoice', 'payment', 'pricing'
+        'purchase', 'order', 'invoice', 'payment', 'pricing',
+        'logistics', 'transport', 'shipping', 'delivery', 'freight',
+        'looking for', 'inquiry', 'request', 'need', 'require'
     ]
     
     # Email domains to prioritize
@@ -66,7 +68,7 @@ class PrefilterService:
         
         # Check for business relevance (optional scoring)
         business_score = self._calculate_business_score(content, email_msg)
-        if business_score < 0.1:  # Very low business relevance
+        if business_score < 0.05:  # Very low business relevance (lowered threshold)
             return PrefilterResult.FILTERED_OUT, ""
         
         return PrefilterResult.PASSED, content
