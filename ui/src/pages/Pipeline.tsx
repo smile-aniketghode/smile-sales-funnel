@@ -319,7 +319,8 @@ const StageColumn: React.FC<StageColumnProps> = ({ stage, deals, stageValue, for
   return (
     <div
       ref={setNodeRef}
-      className="bg-gray-50 rounded-lg border border-gray-200 flex-1 min-w-[280px]"
+      className="bg-gray-50 rounded-lg border border-gray-200 flex-shrink-0"
+      style={{ width: 'calc((100vw - 120px) / 6)', minWidth: '260px' }}
     >
       {/* Column Header */}
       <div className={`${stage.color} p-4 rounded-t-lg border-b border-gray-200`}>
