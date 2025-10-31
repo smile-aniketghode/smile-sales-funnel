@@ -109,8 +109,8 @@ export const Pipeline: React.FC = () => {
 
   if (isError) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+      <div className="px-6 py-8">
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded max-w-2xl">
           <p className="font-bold">⚠️ Unable to load pipeline</p>
           <p className="text-sm">Please check the API connection and try again.</p>
         </div>
@@ -120,7 +120,7 @@ export const Pipeline: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="px-6 py-8">
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading pipeline...</p>
