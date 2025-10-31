@@ -77,13 +77,6 @@ class ExtractLocalNode:
         # Create extraction chain
         self.chain = self.prompt | self.llm | self.parser
 
-        # Create batch extraction prompt
-        self.batch_prompt = ChatPromptTemplate.from_messages([
-            ("system", self._get_batch_system_prompt()),
-            ("human", "{emails_batch}")
-        ])
-        self.batch_chain = self.batch_prompt | self.llm | self.parser
-
     async def __call__(self, state: EmailProcessingState) -> Dict[str, Any]:
         """
         Execute LLM extraction
@@ -231,90 +224,82 @@ CONFIDENCE SCORING:
 
 Respond only with valid JSON. No additional text."""
 
-    def _get_batch_system_prompt(self) -> str:
-        """Get the system prompt for batch extraction"""
-        return """You are a business email analyzer. Extract actionable tasks and potential deals from MULTIPLE emails in a single batch.
-
-TASK EXTRACTION RULES:
-- Only extract clear, actionable tasks with specific action verbs
-- Must be specific enough to be actionable (not vague references)
-- Examples: "Send proposal by Friday", "Schedule follow-up call", "Review contract terms"
-- Set confidence based on clarity and actionability (0.0-1.0)
-
-DEAL EXTRACTION RULES:
-- Only identify potential revenue opportunities with genuine buying interest
-- Must indicate monetary value, contract potential, or purchase intent
-- Convert Indian currency: ₹1 Lakh = 100000, ₹1 Crore = 10000000
-- Currency: Always "INR" for Indian Rupee deals
-- Deal stages: lead, contacted, demo, proposal, negotiation, closed_won
-- Set confidence based on buying signals strength (0.0-1.0)
-
-OUTPUT FORMAT:
-Return a JSON object where each key is the email_id and value contains tasks and deals arrays:
-{
-  "email_1": {"tasks": [...], "deals": [...]},
-  "email_2": {"tasks": [], "deals": []},
-  ...
-}
-
-- Use empty arrays if no clear tasks/deals found for that email
-- Be conservative - false negatives better than false positives
-- Include specific email snippets for each extraction
-
-Respond only with valid JSON matching the above format."""
-
-    async def extract_batch(self, emails_data: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    async def extract_batch(self, emails_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Extract tasks and deals from multiple emails in a single LLM call
+        Extract tasks and deals from multiple emails using LangChain's batch processing
 
         Args:
-            emails_data: List of dicts with keys: email_id, subject, sender, content
+            emails_data: List of dicts with keys: subject, sender, content
 
         Returns:
-            Dict mapping email_id to extraction results: {email_id: {tasks: [], deals: []}}
+            List of extraction results matching input order: [{tasks: [], deals: []}, ...]
         """
         try:
-            # Format batch input for LLM
-            emails_text = []
-            for idx, email in enumerate(emails_data, 1):
-                email_text = f"""EMAIL {idx} (ID: {email['email_id']}):
-SUBJECT: {email['subject']}
-FROM: {email['sender']}
-CONTENT:
-{email['content']}
+            logger.info(f"Starting batch LLM extraction for {len(emails_data)} emails using LangChain abatch")
 
----"""
-                emails_text.append(email_text)
+            # Prepare batch inputs
+            batch_inputs = [
+                {
+                    "subject": email["subject"],
+                    "sender": email["sender"],
+                    "content": email["content"]
+                }
+                for email in emails_data
+            ]
 
-            batch_input = "\n".join(emails_text)
+            # Use LangChain's abatch for parallel processing
+            results = await self.chain.abatch(batch_inputs)
 
-            logger.info(f"Starting batch LLM extraction for {len(emails_data)} emails")
+            # Process results
+            processed_results = []
+            for idx, result in enumerate(results):
+                if isinstance(result, dict):
+                    # Extract tasks and deals
+                    tasks_data = []
+                    for task_raw in result.get("tasks", []):
+                        title = task_raw.get("task", task_raw.get("title", task_raw.get("snippet", "Unknown task")))
+                        description = task_raw.get("snippet", task_raw.get("description", title))
 
-            # Call LLM with batch
-            result = await self.batch_chain.ainvoke({"emails_batch": batch_input})
+                        task_data = {
+                            "title": title,
+                            "description": description if description else title,
+                            "priority": task_raw.get("priority", "medium"),
+                            "due_date": task_raw.get("due_date", ""),
+                            "confidence": task_raw.get("confidence", 0.5),
+                            "snippet": task_raw.get("snippet", title)
+                        }
+                        tasks_data.append(task_data)
 
-            logger.info(f"Batch LLM returned: {type(result)}")
+                    deals_data = []
+                    for deal_raw in result.get("deals", []):
+                        title = deal_raw.get("title", deal_raw.get("snippet", "Unknown deal"))
+                        description = deal_raw.get("description", deal_raw.get("snippet", title))
 
-            # Parse result - should be dict with email IDs as keys
-            if isinstance(result, dict):
-                # Normalize the result to ensure all email_ids are present
-                normalized_result = {}
-                for email in emails_data:
-                    email_id = email['email_id']
-                    if email_id in result:
-                        normalized_result[email_id] = result[email_id]
-                    else:
-                        # Email not in result, return empty
-                        normalized_result[email_id] = {"tasks": [], "deals": []}
+                        deal_data = {
+                            "title": title,
+                            "description": description if description else title,
+                            "value": deal_raw.get("value", 0.0),
+                            "currency": deal_raw.get("currency", "INR"),
+                            "stage": deal_raw.get("stage", "lead"),
+                            "probability": deal_raw.get("probability", 50),
+                            "confidence": deal_raw.get("confidence", 0.5),
+                            "snippet": deal_raw.get("snippet", title)
+                        }
+                        deals_data.append(deal_data)
 
-                logger.info(f"Batch extraction complete. Processed {len(normalized_result)} emails")
-                return normalized_result
-            else:
-                logger.error(f"Unexpected batch result type: {type(result)}")
-                # Return empty results for all emails
-                return {email['email_id']: {"tasks": [], "deals": []} for email in emails_data}
+                    processed_results.append({
+                        "tasks": tasks_data,
+                        "deals": deals_data
+                    })
+                else:
+                    # Empty result
+                    processed_results.append({"tasks": [], "deals": []})
+
+            logger.info(f"Batch extraction complete. Processed {len(processed_results)} emails")
+            return processed_results
 
         except Exception as e:
             logger.error(f"Batch LLM extraction failed: {str(e)}")
             # Return empty results for all emails on error
-            return {email['email_id']: {"tasks": [], "deals": []} for email in emails_data}
+            return [{"tasks": [], "deals": []} for _ in emails_data]
+

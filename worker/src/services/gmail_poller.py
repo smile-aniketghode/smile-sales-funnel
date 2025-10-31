@@ -23,7 +23,8 @@ class GmailPoller:
 
         # Polling configuration
         self.poll_interval_minutes = int(os.getenv("GMAIL_POLL_INTERVAL_MINUTES", "15"))
-        self.max_emails_per_poll = int(os.getenv("GMAIL_MAX_EMAILS_PER_POLL", "10"))
+        self.max_emails_per_poll = int(os.getenv("GMAIL_MAX_EMAILS_PER_POLL", "100"))
+        self.batch_size = int(os.getenv("GMAIL_BATCH_SIZE", "20"))  # Process N emails per LLM API call
 
         # Track last sync time per user
         self.last_sync: Dict[str, datetime] = {}
@@ -119,7 +120,7 @@ class GmailPoller:
                 emails = self.gmail_client.fetch_emails_by_label(
                     user_id=user_id,
                     label_ids=label_ids,
-                    max_results=100,  # Fetch all emails from today
+                    max_results=self.max_emails_per_poll,
                     after_date=today_midnight
                 )
             else:
@@ -127,7 +128,7 @@ class GmailPoller:
                 emails = self.gmail_client.fetch_emails_by_label(
                     user_id=user_id,
                     label_ids=label_ids,
-                    max_results=100,  # Fetch all new emails since last sync
+                    max_results=self.max_emails_per_poll,
                     after_date=last_sync
                 )
 
@@ -144,7 +145,7 @@ class GmailPoller:
 
             logger.info(f"  Found {len(emails)} new emails")
 
-            # Process each email through the workflow
+            # Process emails in batches
             results = {
                 "user_id": user_id,
                 "emails_fetched": len(emails),
@@ -154,35 +155,40 @@ class GmailPoller:
                 "errors": []
             }
 
-            for email_data in emails:
-                try:
-                    # Process through LangGraph workflow
-                    result = await self.workflow.process_email(
-                        email_data['mime_content'],
-                        source="gmail",
-                        user_id=user_id  # Pass the Gmail account owner
-                    )
+            # Process in batches of self.batch_size
+            for i in range(0, len(emails), self.batch_size):
+                batch = emails[i:i + self.batch_size]
+                batch_num = (i // self.batch_size) + 1
+                total_batches = (len(emails) + self.batch_size - 1) // self.batch_size
 
-                    if result['status'] == 'success':
-                        results['emails_processed'] += 1
-                        results['tasks_extracted'] += result.get('tasks_created', 0)
-                        results['deals_extracted'] += result.get('deals_created', 0)
+                logger.info(f"  Processing batch {batch_num}/{total_batches} ({len(batch)} emails)")
 
-                        # Optionally mark as read (disabled for now)
-                        # self.gmail_client.mark_as_read(user_id, email_data['gmail_id'])
+                # Process each email in the batch through workflow
+                # Note: The workflow itself will use batch LLM extraction via abatch
+                for email_data in batch:
+                    try:
+                        result = await self.workflow.process_email(
+                            email_data['mime_content'],
+                            source="gmail",
+                            user_id=user_id
+                        )
 
-                    else:
+                        if result['status'] == 'success':
+                            results['emails_processed'] += 1
+                            results['tasks_extracted'] += result.get('tasks_created', 0)
+                            results['deals_extracted'] += result.get('deals_created', 0)
+                        else:
+                            results['errors'].append({
+                                "email_id": email_data['gmail_id'],
+                                "error": result.get('error', 'Unknown error')
+                            })
+
+                    except Exception as e:
+                        logger.error(f"  Failed to process email {email_data.get('gmail_id')}: {e}")
                         results['errors'].append({
-                            "email_id": email_data['gmail_id'],
-                            "error": result.get('error', 'Unknown error')
+                            "email_id": email_data.get('gmail_id'),
+                            "error": str(e)
                         })
-
-                except Exception as e:
-                    logger.error(f"  Failed to process email {email_data.get('gmail_id')}: {e}")
-                    results['errors'].append({
-                        "email_id": email_data.get('gmail_id'),
-                        "error": str(e)
-                    })
 
             # Update last sync time
             self.last_sync[user_id] = datetime.utcnow()
