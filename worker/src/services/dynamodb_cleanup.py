@@ -170,26 +170,40 @@ class DynamoDBCleanup:
             return {'deleted': 0, 'total': 0, 'success': False, 'error': str(e)}
 
     def delete_email_logs_by_user(self, user_id: str) -> Dict[str, Any]:
-        """Delete all email logs for a user (uses scan - no GSI required)"""
+        """Delete all email logs for a user (uses scan with pagination)"""
         try:
-            # Use scan with filter since email-logs table doesn't have user_id GSI
-            response = self.tables['email_logs'].scan(
-                FilterExpression='user_id = :uid',
-                ExpressionAttributeValues={':uid': user_id}
-            )
-
-            items = response.get('Items', [])
             deleted_count = 0
+            total_count = 0
+            last_evaluated_key = None
 
-            for item in items:
-                if self.delete_email_log(item['message_id_hash']):
-                    deleted_count += 1
+            # Paginate through all results
+            while True:
+                scan_params = {
+                    'FilterExpression': 'user_id = :uid',
+                    'ExpressionAttributeValues': {':uid': user_id}
+                }
+
+                if last_evaluated_key:
+                    scan_params['ExclusiveStartKey'] = last_evaluated_key
+
+                response = self.tables['email_logs'].scan(**scan_params)
+                items = response.get('Items', [])
+                total_count += len(items)
+
+                for item in items:
+                    if self.delete_email_log(item['message_id_hash']):
+                        deleted_count += 1
+
+                # Check if there are more pages
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key:
+                    break
 
             logger.info(f"✅ Deleted {deleted_count} email logs for user: {user_id}")
             return {
                 'deleted': deleted_count,
-                'total': len(items),
-                'success': deleted_count == len(items)
+                'total': total_count,
+                'success': deleted_count == total_count
             }
         except Exception as e:
             logger.error(f"❌ Failed to delete email logs for user {user_id}: {e}")
