@@ -47,18 +47,6 @@ class PersistNode:
             deals_saved = []
             people_saved = []
 
-            # Create Person entity from sender
-            if state.get("sender_email"):
-                try:
-                    created_person = self._create_person_entity(
-                        sender_email=state["sender_email"],
-                        sender_name=state.get("sender_name"),
-                        user_id=state["user_id"]
-                    )
-                    logger.info(f"Created person: {created_person.get_display_name()} ({created_person.email})")
-                except Exception as e:
-                    logger.error(f"Error creating person entity: {e}")
-
             # Create and persist high-confidence tasks (auto-accepted)
             high_conf_tasks = state.get("high_confidence_tasks", [])
             for task_data in high_conf_tasks:
@@ -126,9 +114,22 @@ class PersistNode:
                 except Exception as e:
                     logger.error(f"Error creating draft deal: {e}")
                     continue
-            
+
+            # Create Person entity from sender ONLY if we have tasks or deals
+            # (qualified contacts only)
+            if (created_tasks or created_deals) and state.get("sender_email"):
+                try:
+                    created_person = self._create_person_entity(
+                        sender_email=state["sender_email"],
+                        sender_name=state.get("sender_name"),
+                        user_id=state["user_id"]
+                    )
+                    logger.info(f"Created qualified contact: {created_person.get_display_name()} ({created_person.email})")
+                except Exception as e:
+                    logger.error(f"Error creating person entity: {e}")
+
             # Persist to database if we have entities
-            if created_tasks or created_deals or created_person:
+            if created_tasks or created_deals:
                 # Use existing email log from state or create one
                 email_log = state.get("email_log")
 
