@@ -239,16 +239,21 @@ async def gmail_auth_disconnect(user_id: str = Query(...)):
     Disconnect Gmail account (delete stored tokens and ALL user data including email-logs)
     """
     try:
+        logger.info(f"🔌 Disconnect requested for user: {user_id}")
+
         # Import cleanup utility
         from .services.dynamodb_cleanup import DynamoDBCleanup
 
         # Delete OAuth tokens
         token_deleted = token_storage.delete_token(user_id)
+        logger.info(f"Token deletion result: {token_deleted}")
 
         # Clean up all user data INCLUDING email-logs
         # This allows re-processing emails if user reconnects
         cleanup = DynamoDBCleanup()
         cleanup_result = cleanup.cleanup_all_user_data(user_id, include_email_logs=True)
+
+        logger.info(f"Cleanup result: {cleanup_result}")
 
         if token_deleted and cleanup_result['success']:
             logger.info(f"Gmail disconnected and data cleaned for user: {user_id} ({cleanup_result['total_deleted']} items)")
@@ -259,10 +264,12 @@ async def gmail_auth_disconnect(user_id: str = Query(...)):
                 "details": cleanup_result['details']
             }
         else:
-            raise HTTPException(status_code=500, detail="Failed to disconnect Gmail or clean data")
+            error_msg = f"Token deleted: {token_deleted}, Cleanup success: {cleanup_result['success']}"
+            logger.error(f"Disconnect validation failed: {error_msg}")
+            raise HTTPException(status_code=500, detail=f"Failed to disconnect Gmail or clean data - {error_msg}")
 
     except Exception as e:
-        logger.error(f"Disconnect failed for {user_id}: {e}")
+        logger.error(f"Disconnect failed for {user_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
